@@ -1,5 +1,5 @@
 ## What
-TCNetwork is is a high level request capsule based on [AFNetworking][AFNetworking]. 
+TCNetwork is a high level request capsule based on [AFNetworking][AFNetworking]. 
 Thanks to [YTKNetwork][YTKNetwork].
 
 ## Features
