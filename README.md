@@ -15,7 +15,13 @@ Thanks to [YTKNetwork][YTKNetwork].
 
 * [dake][dakeGithub]
 
+## License
+
+TCNetwork is available under the MIT license. See the LICENSE file for more info.
+
 <!-- external links -->
+
+[dakeGithub]:https://github.com/dake
 
 [YTKNetwork]:https://github.com/yuantiku/YTKNetwork
 [AFNetworking]:https://github.com/AFNetworking/AFNetworking
