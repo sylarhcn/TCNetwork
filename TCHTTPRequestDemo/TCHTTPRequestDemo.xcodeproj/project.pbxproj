@@ -8,9 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		B75089BF1AD65A62007867BC /* YahooWeatherRequestCenter.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089BE1AD65A62007867BC /* YahooWeatherRequestCenter.m */; };
-		B75089D81AD671E6007867BC /* NSObject+TCMapping.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089C31AD671E6007867BC /* NSObject+TCMapping.m */; };
-		B75089D91AD671E6007867BC /* TCBaseParser.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089C51AD671E6007867BC /* TCBaseParser.m */; };
-		B75089DA1AD671E6007867BC /* TCHTTPRequestProcessor.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089C71AD671E6007867BC /* TCHTTPRequestProcessor.m */; };
 		B75089DB1AD671E6007867BC /* TCHTTPBatchRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089CD1AD671E6007867BC /* TCHTTPBatchRequest.m */; };
 		B75089DC1AD671E6007867BC /* TCHTTPCacheRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089CF1AD671E6007867BC /* TCHTTPCacheRequest.m */; };
 		B75089DD1AD671E6007867BC /* TCHTTPRequest+Public.m in Sources */ = {isa = PBXBuildFile; fileRef = B75089D11AD671E6007867BC /* TCHTTPRequest+Public.m */; };
@@ -54,12 +51,6 @@
 /* Begin PBXFileReference section */
 		B75089BD1AD65A62007867BC /* YahooWeatherRequestCenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = YahooWeatherRequestCenter.h; sourceTree = "<group>"; };
 		B75089BE1AD65A62007867BC /* YahooWeatherRequestCenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = YahooWeatherRequestCenter.m; sourceTree = "<group>"; };
-		B75089C21AD671E6007867BC /* NSObject+TCMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSObject+TCMapping.h"; sourceTree = "<group>"; };
-		B75089C31AD671E6007867BC /* NSObject+TCMapping.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSObject+TCMapping.m"; sourceTree = "<group>"; };
-		B75089C41AD671E6007867BC /* TCBaseParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCBaseParser.h; sourceTree = "<group>"; };
-		B75089C51AD671E6007867BC /* TCBaseParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TCBaseParser.m; sourceTree = "<group>"; };
-		B75089C61AD671E6007867BC /* TCHTTPRequestProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCHTTPRequestProcessor.h; sourceTree = "<group>"; };
-		B75089C71AD671E6007867BC /* TCHTTPRequestProcessor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TCHTTPRequestProcessor.m; sourceTree = "<group>"; };
 		B75089C91AD671E6007867BC /* TCHTTPRequestCenterProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCHTTPRequestCenterProtocol.h; sourceTree = "<group>"; };
 		B75089CA1AD671E6007867BC /* TCHTTPRequestUrlFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCHTTPRequestUrlFilter.h; sourceTree = "<group>"; };
 		B75089CB1AD671E6007867BC /* TCHTTPResponseValidator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCHTTPResponseValidator.h; sourceTree = "<group>"; };
@@ -142,7 +133,6 @@
 		B75089C01AD671E6007867BC /* TCNetwork */ = {
 			isa = PBXGroup;
 			children = (
-				B75089C11AD671E6007867BC /* DataProcessor */,
 				B75089C81AD671E6007867BC /* Protocol */,
 				B75089CC1AD671E6007867BC /* TCHTTPBatchRequest.h */,
 				B75089CD1AD671E6007867BC /* TCHTTPBatchRequest.m */,
@@ -159,19 +149,6 @@
 			);
 			name = TCNetwork;
 			path = ../TCNetwork;
-			sourceTree = "<group>";
-		};
-		B75089C11AD671E6007867BC /* DataProcessor */ = {
-			isa = PBXGroup;
-			children = (
-				B75089C21AD671E6007867BC /* NSObject+TCMapping.h */,
-				B75089C31AD671E6007867BC /* NSObject+TCMapping.m */,
-				B75089C41AD671E6007867BC /* TCBaseParser.h */,
-				B75089C51AD671E6007867BC /* TCBaseParser.m */,
-				B75089C61AD671E6007867BC /* TCHTTPRequestProcessor.h */,
-				B75089C71AD671E6007867BC /* TCHTTPRequestProcessor.m */,
-			);
-			path = DataProcessor;
 			sourceTree = "<group>";
 		};
 		B75089C81AD671E6007867BC /* Protocol */ = {
@@ -427,7 +404,6 @@
 				B75089DE1AD671E6007867BC /* TCHTTPRequest.m in Sources */,
 				B75FBBA51AD64FD800C46F4B /* AFHTTPRequestOperationManager.m in Sources */,
 				B75089E01AD671E6007867BC /* TCHTTPRequestHelper.m in Sources */,
-				B75089DA1AD671E6007867BC /* TCHTTPRequestProcessor.m in Sources */,
 				B75089DB1AD671E6007867BC /* TCHTTPBatchRequest.m in Sources */,
 				B75FBBA81AD64FD800C46F4B /* AFSecurityPolicy.m in Sources */,
 				B75FBBAA1AD64FD800C46F4B /* AFURLRequestSerialization.m in Sources */,
@@ -436,8 +412,6 @@
 				B7606A3B1AD64977001461CA /* AppDelegate.m in Sources */,
 				B75089BF1AD65A62007867BC /* YahooWeatherRequestCenter.m in Sources */,
 				B75089DC1AD671E6007867BC /* TCHTTPCacheRequest.m in Sources */,
-				B75089D81AD671E6007867BC /* NSObject+TCMapping.m in Sources */,
-				B75089D91AD671E6007867BC /* TCBaseParser.m in Sources */,
 				B75FBBA31AD64FD800C46F4B /* AFDownloadRequestOperation.m in Sources */,
 				B7606A381AD64977001461CA /* main.m in Sources */,
 				B75FBBA41AD64FD800C46F4B /* AFHTTPRequestOperation.m in Sources */,
