@@ -20,6 +20,7 @@
 // default: 0, use Max(-[TCHTTPRequestCenter timeoutInterval], -[TCHTTPRequest timeoutInterval])
 @property(nonatomic,assign) NSTimeInterval timeoutInterval;
 @property(nonatomic,assign) NSInteger maxConcurrentOperationCount;
+@property(nonatomic,strong) NSSet *acceptableContentTypes;
 @property(nonatomic,weak) id<TCHTTPRequestUrlFilter> urlFilter;
 
 + (instancetype)defaultCenter;
@@ -33,6 +34,8 @@
 
 - (NSString *)cachePathForResponse;
 - (void)removeAllCachedResponse;
+
+- (void)registerResponseValidatorClass:(Class)validatorClass;
 
 
 #pragma mark - Making HTTP Requests

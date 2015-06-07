@@ -11,6 +11,9 @@
 @protocol TCHTTPRequestUrlFilter <NSObject>
 
 @optional
++ (NSString *)filteredUrlForUrl:(NSString *)url;
++ (NSDictionary *)filteredParamForParam:(NSDictionary *)param;
+
 - (NSString *)filteredUrlForUrl:(NSString *)url;
 - (NSDictionary *)filteredParamForParam:(NSDictionary *)param;
 

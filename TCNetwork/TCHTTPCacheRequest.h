@@ -14,6 +14,8 @@
 @property(nonatomic,assign) BOOL shouldCacheResponse; // default: YES
 @property(nonatomic,assign) NSTimeInterval cacheTimeoutInterval; // default: 0, expired anytime, < 0: never expired
 @property(nonatomic,assign) BOOL isDataFromCache;
+@property(nonatomic,assign) BOOL isCacheExpired;
+@property(nonatomic,assign) BOOL isForceStart;
 // should return expired cache or not
 @property(nonatomic,assign) BOOL shouldExpiredCacheValid; // default: NO
 

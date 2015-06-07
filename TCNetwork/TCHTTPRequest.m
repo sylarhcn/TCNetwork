@@ -25,19 +25,19 @@
 @implementation TCHTTPRequest
 {
     @private
-    BOOL _isDataFromCache;
-    
     NSString *_authorizationUsername;
     NSString *_authorizationPassword;
     void *_observer;
 }
 
+@dynamic isCacheExpired;
 @dynamic shouldIgnoreCache;
 @dynamic shouldCacheResponse;
 @dynamic cacheTimeoutInterval;
 @dynamic isDataFromCache;
 @dynamic shouldExpiredCacheValid;
 
+@synthesize isForceStart = _isForceStart;
 @synthesize isRetainByRequestPool = _isRetainByRequestPool;
 
 
@@ -93,7 +93,7 @@
 - (NSString *)requestIdentifier
 {
     if (nil == _requestIdentifier) {
-        _requestIdentifier = [NSString stringWithFormat:@"%tu", self.hash];
+        _requestIdentifier = [NSString stringWithFormat:@"%@_%zd", self.apiUrl, self.requestMethod].MD5_16;
     }
     
     return _requestIdentifier;
@@ -128,6 +128,7 @@
 
 - (BOOL)forceStart:(NSError **)error
 {
+    self.isForceStart = YES;
     return [self start:error];
 }
 
@@ -149,6 +150,11 @@
 
 
 #pragma mark - Cache
+
+- (BOOL)isCacheExpired
+{
+    return YES;
+}
 
 - (BOOL)shouldIgnoreCache
 {
@@ -180,6 +186,11 @@
     
 }
 
+- (void)requestRespondFailed
+{
+    
+}
+
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
                                   sensitiveData:(id)sensitiveData;
 {
@@ -199,7 +210,7 @@
 
 #pragma mark - Helper
 
-- (NSString *)description
+- (NSString *)debugDescription
 {
     NSURLRequest *request = self.requestOperation.request;
     return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding]];

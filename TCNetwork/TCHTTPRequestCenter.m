@@ -13,6 +13,7 @@
 #import "TCHTTPRequestHelper.h"
 
 #import "TCHTTPRequest+Public.h"
+#import "TCBaseResponseValidator.h"
 
 
 @implementation TCHTTPRequestCenter
@@ -21,6 +22,7 @@
     AFHTTPRequestOperationManager *_requestManager;
     NSMutableDictionary *_requestPool;
     NSString *_cachePathForResponse;
+    Class _responseValidorClass;
 }
 
 + (instancetype)defaultCenter
@@ -34,6 +36,15 @@
     return s_defaultCenter;
 }
 
+- (Class)responseValidorClass
+{
+    return _responseValidorClass ?: TCBaseResponseValidator.class;
+}
+
+- (void)registerResponseValidatorClass:(Class)validatorClass
+{
+    _responseValidorClass = validatorClass;
+}
 
 - (BOOL)networkReachable
 {
@@ -107,6 +118,13 @@
         }
         else if (request.serializerType == kTCHTTPRequestSerializerTypeJSON) {
             _requestManager.requestSerializer = [AFJSONRequestSerializer serializer];
+        }
+        
+        
+        if (nil != self.acceptableContentTypes) {
+            NSMutableSet *set = [_requestManager.responseSerializer.acceptableContentTypes mutableCopy];
+            [set unionSet:self.acceptableContentTypes];
+            _requestManager.responseSerializer.acceptableContentTypes = set;
         }
         
         _requestManager.requestSerializer.timeoutInterval = MAX(self.timeoutInterval, request.timeoutInterval);
@@ -318,7 +336,7 @@
             }
         }
         else {
-            [dic setValue:@NO forKey:@"isRetainByRequestPool"];
+            [dic.allValues setValue:@NO forKeyPath:@"isRetainByRequestPool"];
             [dic.allValues makeObjectsPerformSelector:@selector(cancel)];
             [_requestPool removeObjectForKey:@(key)];
         }
@@ -361,30 +379,32 @@
         return queryUrl;
     }
     
-    NSString *baseUrl = nil;
+    NSURL *baseUrl = nil;
     
     if (request.shouldUseCDN) {
         if (request.cdnUrl.length > 0) {
-            baseUrl = request.cdnUrl;
+            baseUrl = [NSURL URLWithString:request.cdnUrl];
         }
         else {
-            baseUrl = self.cdnURL ? self.cdnURL.absoluteString : self.baseURL.absoluteString;
+            baseUrl = self.cdnURL ?: self.baseURL;
         }
     }
     else {
         if (request.baseUrl.length > 0) {
-            baseUrl = request.baseUrl;
+            baseUrl = [NSURL URLWithString:request.baseUrl];
         }
         else {
-            baseUrl = self.baseURL.absoluteString;
+            baseUrl = self.baseURL;
         }
     }
-    
-    return [baseUrl stringByAppendingPathComponent:queryUrl];
+    return [baseUrl URLByAppendingPathComponent:queryUrl].absoluteString;
 }
 
 - (void)handleRequestResult:(id<TCHTTPRequestProtocol>)request success:(BOOL)success error:(NSError *)error
 {
+#ifdef DEBUG
+    NSLog(@"%@", error);
+#endif
     dispatch_async(dispatch_get_main_queue(), ^{
         request.state = kTCHTTPRequestStateFinished;
         
@@ -396,13 +416,16 @@
         BOOL isValid = success;
         if (isValid) {
             
-            if (nil != request.responseValidater && [request.responseValidater respondsToSelector:@selector(validateHTTPResponse:)]) {
-                isValid = [request.responseValidater validateHTTPResponse:request.responseObject];
+            if (nil != request.responseValidator && [request.responseValidator respondsToSelector:@selector(validateHTTPResponse:)]) {
+                isValid = [request.responseValidator validateHTTPResponse:request.responseObject];
             }
-            
-            if (isValid) {
-                [request requestRespondSuccess];
-            }
+        }
+        
+        if (isValid) {
+            [request requestRespondSuccess];
+        }
+        else {
+            [request requestRespondFailed];
         }
         
         if (nil != request.delegate && [request.delegate respondsToSelector:@selector(processRequest:success:)]) {
@@ -425,6 +448,7 @@
     request.requestAgent = self;
     request.apiUrl = apiUrl;
     request.baseUrl = host;
+    request.responseValidator = [[self.responseValidorClass alloc] init];
     
     return request;
 }
@@ -435,6 +459,7 @@
     request.requestAgent = self;
     request.apiUrl = apiUrl;
     request.baseUrl = host;
+    request.responseValidator = [[self.responseValidorClass alloc] init];
     
     return request;
 }

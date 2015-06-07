@@ -173,7 +173,7 @@
 
 #pragma mark - Helper
 
-- (NSString *)description
+- (NSString *)debugDescription
 {
     return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n", NSStringFromClass(self.class), self.requestArray];
 }

@@ -36,6 +36,7 @@
 		B7606A431AD64977001461CA /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B7606A421AD64977001461CA /* Images.xcassets */; };
 		B7606A461AD64977001461CA /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = B7606A441AD64977001461CA /* LaunchScreen.xib */; };
 		B7606A521AD64977001461CA /* TCHTTPRequestDemoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = B7606A511AD64977001461CA /* TCHTTPRequestDemoTests.m */; };
+		B7C169881B2426F500E17602 /* TCBaseResponseValidator.m in Sources */ = {isa = PBXBuildFile; fileRef = B7C169871B2426F500E17602 /* TCBaseResponseValidator.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +111,8 @@
 		B7606A4B1AD64977001461CA /* TCHTTPRequestDemoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCHTTPRequestDemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7606A501AD64977001461CA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B7606A511AD64977001461CA /* TCHTTPRequestDemoTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TCHTTPRequestDemoTests.m; sourceTree = "<group>"; };
+		B7C169861B2426F500E17602 /* TCBaseResponseValidator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCBaseResponseValidator.h; sourceTree = "<group>"; };
+		B7C169871B2426F500E17602 /* TCBaseResponseValidator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TCBaseResponseValidator.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +157,8 @@
 		B75089C81AD671E6007867BC /* Protocol */ = {
 			isa = PBXGroup;
 			children = (
+				B7C169861B2426F500E17602 /* TCBaseResponseValidator.h */,
+				B7C169871B2426F500E17602 /* TCBaseResponseValidator.m */,
 				B75089C91AD671E6007867BC /* TCHTTPRequestCenterProtocol.h */,
 				B75089CA1AD671E6007867BC /* TCHTTPRequestUrlFilter.h */,
 				B75089CB1AD671E6007867BC /* TCHTTPResponseValidator.h */,
@@ -411,6 +416,7 @@
 				B75089DD1AD671E6007867BC /* TCHTTPRequest+Public.m in Sources */,
 				B7606A3B1AD64977001461CA /* AppDelegate.m in Sources */,
 				B75089BF1AD65A62007867BC /* YahooWeatherRequestCenter.m in Sources */,
+				B7C169881B2426F500E17602 /* TCBaseResponseValidator.m in Sources */,
 				B75089DC1AD671E6007867BC /* TCHTTPCacheRequest.m in Sources */,
 				B75FBBA31AD64FD800C46F4B /* AFDownloadRequestOperation.m in Sources */,
 				B7606A381AD64977001461CA /* main.m in Sources */,

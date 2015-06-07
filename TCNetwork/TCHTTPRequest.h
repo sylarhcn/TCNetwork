@@ -48,7 +48,7 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL successe);
 @property(nonatomic,weak) id<TCHTTPRequestDelegate> delegate;
 @property(nonatomic,copy) TCRequestResultBlockType resultBlock;
 
-@property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidater;
+@property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidator;
 @property(nonatomic,weak) id<TCHTTPRequestCenterProtocol> requestAgent;
 @property(nonatomic,strong) AFHTTPRequestOperation *requestOperation;
 

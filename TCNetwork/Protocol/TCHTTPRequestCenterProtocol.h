@@ -29,7 +29,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 @property(nonatomic,weak) id<TCHTTPRequestDelegate> delegate;
 @property(nonatomic,copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL successe);
 
-@property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidater;
+@property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidator;
 
 @property(nonatomic,copy) NSString *requestIdentifier;
 @property(atomic,assign) TCHTTPRequestState state;
@@ -66,6 +66,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 - (id)responseObject;
 // for override
 - (void)requestRespondSuccess;
+- (void)requestRespondFailed;
 
 
 #pragma mark - Cache
@@ -73,9 +74,12 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 @property(nonatomic,assign) BOOL shouldIgnoreCache; // always: YES
 @property(nonatomic,assign) BOOL shouldCacheResponse; // always: NO
 @property(nonatomic,assign) NSTimeInterval cacheTimeoutInterval; // always: 0, expired anytime
+@property(nonatomic,assign) BOOL isCacheExpired;
 @property(nonatomic,assign) BOOL isDataFromCache;
+@property(nonatomic,assign) BOOL isForceStart;
 // should return expired cache or not
 @property(nonatomic,assign) BOOL shouldExpiredCacheValid; // default: NO
+
 
 /**
  @brief	fire a request regardless of cache available
