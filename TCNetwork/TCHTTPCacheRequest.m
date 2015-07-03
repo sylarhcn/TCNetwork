@@ -61,8 +61,7 @@
 
 - (void)clearCacheResponse
 {
-    _cacheResponse = nil;
-    self.isDataFromCache = NO;
+    [self requestRespondReset];
     self.isCacheExpired = self.cacheTimeoutInterval == 0;
 }
 
@@ -86,6 +85,14 @@
     _sensitiveDataForCachePathFilter = sensitiveData;
 }
 
+
+- (void)requestRespondReset
+{
+    [super requestRespondReset];
+    _cacheResponse = nil;
+    self.isDataFromCache = NO;
+}
+
 - (void)requestRespondSuccess
 {
     [super requestRespondSuccess];
@@ -104,9 +111,7 @@
 - (void)requestRespondFailed
 {
     [super requestRespondFailed];
-    
-    _cacheResponse = nil;
-    self.isDataFromCache = NO;
+    [self requestRespondReset];
 }
 
 - (BOOL)isCacheAvailable
@@ -128,19 +133,21 @@
     }
 }
 
-- (void)requestCallback
+- (void)cacheRequestCallback
 {
     BOOL isValid = YES;
-    if (nil != self.responseValidator && [self.responseValidator respondsToSelector:@selector(validateHTTPResponse:)]) {
-        isValid = [self.responseValidator validateHTTPResponse:self.responseObject];
+    if (nil != self.responseValidator && [self.responseValidator respondsToSelector:@selector(validateHTTPResponse:fromCache:)]) {
+        isValid = [self.responseValidator validateHTTPResponse:self.responseObject fromCache:YES];
     }
     
-    if (nil != self.delegate && [self.delegate respondsToSelector:@selector(processRequest:success:)]) {
-        [self.delegate processRequest:self success:isValid];
-    }
-    
-    if (nil != self.resultBlock) {
-        self.resultBlock(self, isValid);
+    if (isValid) {
+        if (nil != self.delegate && [self.delegate respondsToSelector:@selector(processRequest:success:)]) {
+            [self.delegate processRequest:self success:isValid];
+        }
+        
+        if (nil != self.resultBlock) {
+            self.resultBlock(self, isValid);
+        }
     }
 }
 
@@ -153,7 +160,7 @@
     if (nil != self.cacheResponse) {
         if (self.isCacheAvailable) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                [self requestCallback];
+                [self cacheRequestCallback];
                 self.resultBlock = nil;
             });
             
@@ -161,7 +168,7 @@
         }
         else if (self.shouldExpiredCacheValid) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                [self requestCallback];
+                [self cacheRequestCallback];
             });
         }
     }
@@ -181,7 +188,7 @@
     if (nil != self.cacheResponse
         && (self.isCacheAvailable || self.shouldExpiredCacheValid)) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self requestCallback];
+            [self cacheRequestCallback];
         });
     }
     

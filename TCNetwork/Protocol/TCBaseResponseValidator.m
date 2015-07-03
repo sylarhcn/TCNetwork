@@ -17,7 +17,7 @@
 
 #pragma mark - TCHTTPResponseValidator
 
-- (BOOL)validateHTTPResponse:(id)obj
+- (BOOL)validateHTTPResponse:(id)obj fromCache:(BOOL)fromCache
 {
     self.success = nil != obj;
     self.data = obj;

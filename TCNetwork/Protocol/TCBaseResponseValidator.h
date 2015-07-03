@@ -15,7 +15,7 @@
 @property(nonatomic,assign) BOOL success;
 @property(nonatomic,strong) NSError *error;
 
-- (BOOL)validateHTTPResponse:(id)obj;
+- (BOOL)validateHTTPResponse:(id)obj fromCache:(BOOL)fromCache;
 
 @end
 

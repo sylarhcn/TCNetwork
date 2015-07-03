@@ -41,13 +41,6 @@
 @synthesize isRetainByRequestPool = _isRetainByRequestPool;
 
 
-#ifdef DEBUG
-- (void)dealloc
-{
-    NSLog(@"%@", self);
-}
-#endif
-
 - (instancetype)init
 {
     self = [super init];
@@ -93,7 +86,7 @@
 - (NSString *)requestIdentifier
 {
     if (nil == _requestIdentifier) {
-        _requestIdentifier = [NSString stringWithFormat:@"%@_%zd", self.apiUrl, self.requestMethod].MD5_16;
+        _requestIdentifier = [NSString stringWithFormat:@"%p_%@_%zd", self.observer, self.apiUrl, self.requestMethod].MD5_16;
     }
     
     return _requestIdentifier;
@@ -191,6 +184,11 @@
     
 }
 
+- (void)requestRespondReset
+{
+    
+}
+
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
                                   sensitiveData:(id)sensitiveData;
 {
@@ -210,7 +208,7 @@
 
 #pragma mark - Helper
 
-- (NSString *)debugDescription
+- (NSString *)description
 {
     NSURLRequest *request = self.requestOperation.request;
     return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding]];

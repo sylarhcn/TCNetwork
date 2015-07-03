@@ -42,6 +42,7 @@
 
 //
 // request method below, will not auto start
+- (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host cache:(BOOL)cache;
 - (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host;
 - (TCHTTPRequest *)cacheRequestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host;
 - (TCHTTPRequest *)requestForDownload:(NSString *)url to:(NSString *)dstPath;

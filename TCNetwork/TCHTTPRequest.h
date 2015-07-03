@@ -34,7 +34,7 @@ typedef void (^AFConstructingBlock)(id<AFMultipartFormData> formData);
 typedef void (^AFDownloadProgressBlock)(AFDownloadRequestOperation *operation, NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 
 @class TCHTTPRequest;
-typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL successe);
+typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 
 
 #pragma mark -

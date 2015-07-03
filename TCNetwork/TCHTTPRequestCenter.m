@@ -375,7 +375,7 @@
         }
     }
     
-    if ([queryUrl hasPrefix:@"http"]) {
+    if ([queryUrl.lowercaseString hasPrefix:@"http"]) {
         return queryUrl;
     }
     
@@ -402,9 +402,6 @@
 
 - (void)handleRequestResult:(id<TCHTTPRequestProtocol>)request success:(BOOL)success error:(NSError *)error
 {
-#ifdef DEBUG
-    NSLog(@"%@", error);
-#endif
     dispatch_async(dispatch_get_main_queue(), ^{
         request.state = kTCHTTPRequestStateFinished;
         
@@ -413,11 +410,22 @@
             [self removeForObserver:request.observer forIdentifier:request.requestIdentifier];
         }
         
+        [request requestRespondReset];
+        
         BOOL isValid = success;
-        if (isValid) {
             
-            if (nil != request.responseValidator && [request.responseValidator respondsToSelector:@selector(validateHTTPResponse:)]) {
-                isValid = [request.responseValidator validateHTTPResponse:request.responseObject];
+        if (nil != request.responseValidator) {
+            if (isValid) {
+                if ([request.responseValidator respondsToSelector:@selector(validateHTTPResponse:fromCache:)]) {
+                    isValid = [request.responseValidator validateHTTPResponse:request.responseObject fromCache:NO];
+                }
+            }
+            else {
+                
+                if ([request.responseValidator respondsToSelector:@selector(reset)]) {
+                    [request.responseValidator reset];
+                }
+                request.responseValidator.error = error;
             }
         }
         
@@ -426,6 +434,9 @@
         }
         else {
             [request requestRespondFailed];
+#ifndef TC_IOS_PUBLISH
+            NSLog(@"%@\n RESPONSE:%@ \nERROR: %@", request, request.responseObject, error);
+#endif
         }
         
         if (nil != request.delegate && [request.delegate respondsToSelector:@selector(processRequest:success:)]) {
@@ -441,6 +452,16 @@
 
 
 #pragma mark - Making HTTP Requests
+
+- (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host cache:(BOOL)cache
+{
+    if (cache) {
+        return [self cacheRequestWithMethod:method apiUrl:apiUrl host:host];
+    }
+    else {
+        return [self requestWithMethod:method apiUrl:apiUrl host:host];
+    }
+}
 
 - (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host
 {

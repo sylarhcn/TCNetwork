@@ -27,7 +27,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 #pragma mark - callback
 
 @property(nonatomic,weak) id<TCHTTPRequestDelegate> delegate;
-@property(nonatomic,copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL successe);
+@property(nonatomic,copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL success);
 
 @property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidator;
 
@@ -47,7 +47,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
  @return <#return value description#>
  */
 - (BOOL)start:(NSError **)error;
-- (BOOL)startWithResult:(void (^)(id<TCHTTPRequestProtocol> request, BOOL successe))resultBlock error:(NSError **)error;
+- (BOOL)startWithResult:(void (^)(id<TCHTTPRequestProtocol> request, BOOL success))resultBlock error:(NSError **)error;
 
 // delegate, resulteBlock always called, even if request was cancelled.
 - (void)cancel;
@@ -67,6 +67,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 // for override
 - (void)requestRespondSuccess;
 - (void)requestRespondFailed;
+- (void)requestRespondReset;
 
 
 #pragma mark - Cache
