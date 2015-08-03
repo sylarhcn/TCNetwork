@@ -11,6 +11,8 @@
 #import "TCHTTPRequestUrlFilter.h"
 #import "TCHTTPRequest.h"
 
+
+@class AFSecurityPolicy;
 @interface TCHTTPRequestCenter : NSObject <TCHTTPRequestCenterProtocol>
 
 @property(nonatomic,strong) NSURL *baseURL;
@@ -25,6 +27,7 @@
 
 + (instancetype)defaultCenter;
 - (instancetype)initWithBaseURL:(NSURL *)url;
+- (AFSecurityPolicy *)securityPolicy;
 
 - (BOOL)addRequest:(TCHTTPRequest *)request error:(NSError **)error;
 

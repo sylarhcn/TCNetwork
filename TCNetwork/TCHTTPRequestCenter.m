@@ -73,6 +73,11 @@
     return _cachePathForResponse;
 }
 
+- (AFSecurityPolicy *)securityPolicy
+{
+    return nil;
+}
+
 
 - (instancetype)init
 {
@@ -81,8 +86,12 @@
         _requestPool = [NSMutableDictionary dictionary];
         
         [[AFNetworkActivityIndicatorManager sharedManager] setEnabled:YES];
-        _requestManager = [AFHTTPRequestOperationManager manager];
+        _requestManager = [[AFHTTPRequestOperationManager alloc] init];
         [_requestManager.reachabilityManager startMonitoring];
+        AFSecurityPolicy *policy = self.securityPolicy;
+        if (nil != policy) {
+            _requestManager.securityPolicy = policy;
+        }
     }
     return self;
 }

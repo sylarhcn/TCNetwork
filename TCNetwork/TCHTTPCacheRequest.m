@@ -185,7 +185,7 @@
 - (BOOL)forceStart:(NSError **)error
 {
     self.isForceStart = YES;
-    if (nil != self.cacheResponse
+    if (!self.shouldIgnoreCache && nil != self.cacheResponse
         && (self.isCacheAvailable || self.shouldExpiredCacheValid)) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self cacheRequestCallback];
