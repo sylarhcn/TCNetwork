@@ -81,7 +81,7 @@
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
                                   sensitiveData:(id)sensitiveData;
 {
-    _parametersForCachePathFilter = parameters;
+    _parametersForCachePathFilter = [parameters copy];
     _sensitiveDataForCachePathFilter = sensitiveData;
 }
 

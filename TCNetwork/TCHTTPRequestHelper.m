@@ -87,9 +87,11 @@
         queryString = [[NSMutableString alloc] init];
         for (NSString *key in self.allKeys) {
             NSString *value = self[key];
-            value = [NSString stringWithFormat:@"%@",value];
-            value = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)value, CFSTR("."), CFSTR(":/?#[]@!$&'()*+,;="), kCFStringEncodingUTF8);
-            [queryString appendFormat:@"&%@=%@", key, value];
+            if (nil != value) {
+                value = [NSString stringWithFormat:@"%@", value];
+                value = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)value, CFSTR("."), CFSTR(":/?#[]@!$&'()*+,;="), kCFStringEncodingUTF8);
+                [queryString appendFormat:queryString.length > 0 ? @"&%@=%@" : @"%@=%@", key, value];
+            }
         }
     }
     return queryString;
