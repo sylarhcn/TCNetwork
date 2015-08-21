@@ -11,9 +11,9 @@
 
 @interface TCBaseResponseValidator : NSObject <TCHTTPResponseValidator>
 
-@property(nonatomic,strong) id data;
-@property(nonatomic,assign) BOOL success;
-@property(nonatomic,strong) NSError *error;
+@property (nonatomic, strong) id data;
+@property (nonatomic, assign) BOOL success;
+@property (nonatomic, strong) NSError *error;
 
 - (BOOL)validateHTTPResponse:(id)obj fromCache:(BOOL)fromCache;
 

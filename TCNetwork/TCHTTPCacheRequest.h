@@ -10,14 +10,13 @@
 
 @interface TCHTTPCacheRequest : TCHTTPRequest
 
-@property(nonatomic,assign) BOOL shouldIgnoreCache; // default: NO
-@property(nonatomic,assign) BOOL shouldCacheResponse; // default: YES
-@property(nonatomic,assign) NSTimeInterval cacheTimeoutInterval; // default: 0, expired anytime, < 0: never expired
-@property(nonatomic,assign) BOOL isDataFromCache;
-@property(nonatomic,assign) BOOL isCacheExpired;
-@property(nonatomic,assign) BOOL isForceStart;
+@property (nonatomic, assign) BOOL shouldIgnoreCache; // default: NO
+@property (nonatomic, assign) BOOL shouldCacheResponse; // default: YES
+@property (nonatomic, assign) NSTimeInterval cacheTimeoutInterval; // default: 0, expired anytime, < 0: never expired
+@property (nonatomic, assign) BOOL isDataFromCache;
+@property (nonatomic, assign) BOOL isForceStart;
 // should return expired cache or not
-@property(nonatomic,assign) BOOL shouldExpiredCacheValid; // default: NO
+@property (nonatomic, assign) BOOL shouldExpiredCacheValid; // default: NO
 
 
 /**
@@ -29,7 +28,8 @@
  @return <#return value description#>
  */
 - (BOOL)forceStart:(NSError **)error;
-- (id)cacheResponse;
+- (id)cacheResponse:(BOOL *)isCacheValid;
+- (BOOL)isCacheValid;
 
 // default: parameters = self.parameters, sensitiveData = nil
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters

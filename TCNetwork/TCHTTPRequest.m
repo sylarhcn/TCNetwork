@@ -30,7 +30,6 @@
     void *_observer;
 }
 
-@dynamic isCacheExpired;
 @dynamic shouldIgnoreCache;
 @dynamic shouldCacheResponse;
 @dynamic cacheTimeoutInterval;
@@ -144,9 +143,9 @@
 
 #pragma mark - Cache
 
-- (BOOL)isCacheExpired
+- (BOOL)isCacheValid
 {
-    return YES;
+    return NO;
 }
 
 - (BOOL)shouldIgnoreCache
@@ -169,7 +168,7 @@
     return NO;
 }
 
-- (id)cacheResponse
+- (id)cacheResponse:(BOOL *)isCacheValid
 {
     return nil;
 }

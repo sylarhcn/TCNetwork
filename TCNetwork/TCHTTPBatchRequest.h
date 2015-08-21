@@ -10,7 +10,7 @@
 
 @interface TCHTTPBatchRequest : TCHTTPRequest
 
-@property(nonatomic,copy,readwrite) NSArray *requestArray;
+@property (nonatomic, copy, readwrite) NSArray *requestArray;
 
 + (instancetype)requestWithRequests:(NSArray *)requests;
 - (instancetype)initWithRequests:(NSArray *)requests;

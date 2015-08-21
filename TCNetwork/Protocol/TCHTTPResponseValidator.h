@@ -11,9 +11,9 @@
 @protocol TCHTTPResponseValidator <NSObject>
 
 @required
-@property(nonatomic,strong) id data;
-@property(nonatomic,assign) BOOL success;
-@property(nonatomic,strong) NSError *error;
+@property (nonatomic, strong) id data;
+@property (nonatomic, assign) BOOL success;
+@property (nonatomic, strong) NSError *error;
 
 @optional
 + (BOOL)validateHTTPResponse:(id)obj fromCache:(BOOL)fromCache;

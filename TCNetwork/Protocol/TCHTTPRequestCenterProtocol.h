@@ -26,13 +26,13 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 
 #pragma mark - callback
 
-@property(nonatomic,weak) id<TCHTTPRequestDelegate> delegate;
-@property(nonatomic,copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL success);
+@property (nonatomic, weak) id<TCHTTPRequestDelegate> delegate;
+@property (nonatomic, copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL success);
 
-@property(nonatomic,strong) id<TCHTTPResponseValidator> responseValidator;
+@property (nonatomic, strong) id<TCHTTPResponseValidator> responseValidator;
 
-@property(nonatomic,copy) NSString *requestIdentifier;
-@property(atomic,assign) TCHTTPRequestState state;
+@property (nonatomic, copy) NSString *requestIdentifier;
+@property (atomic, assign) TCHTTPRequestState state;
 
 - (void *)observer;
 - (void)setObserver:(__unsafe_unretained id)observer;
@@ -56,12 +56,12 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 
 #pragma mark - construct request
 
-@property(nonatomic,copy) NSString *apiUrl; // "getUserInfo/"
-@property(nonatomic,copy) NSString *baseUrl; // "http://eet/oo/"
-@property(nonatomic,copy) NSString *cdnUrl; // "http://sdfd/oo"
+@property (nonatomic, copy) NSString *apiUrl; // "getUserInfo/"
+@property (nonatomic, copy) NSString *baseUrl; // "http://eet/oo/"
+@property (nonatomic, copy) NSString *cdnUrl; // "http://sdfd/oo"
 
-@property(nonatomic,assign) BOOL shouldUseCDN;
-@property(nonatomic,assign) BOOL isRetainByRequestPool;
+@property (nonatomic, assign) BOOL shouldUseCDN;
+@property (nonatomic, assign) BOOL isRetainByRequestPool;
 
 - (id)responseObject;
 // for override
@@ -72,14 +72,13 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 
 #pragma mark - Cache
 
-@property(nonatomic,assign) BOOL shouldIgnoreCache; // always: YES
-@property(nonatomic,assign) BOOL shouldCacheResponse; // always: NO
-@property(nonatomic,assign) NSTimeInterval cacheTimeoutInterval; // always: 0, expired anytime
-@property(nonatomic,assign) BOOL isCacheExpired;
-@property(nonatomic,assign) BOOL isDataFromCache;
-@property(nonatomic,assign) BOOL isForceStart;
+@property (nonatomic, assign) BOOL shouldIgnoreCache; // always: YES
+@property (nonatomic, assign) BOOL shouldCacheResponse; // always: NO
+@property (nonatomic, assign) NSTimeInterval cacheTimeoutInterval; // always: 0, expired anytime
+@property (nonatomic, assign) BOOL isDataFromCache;
+@property (nonatomic, assign) BOOL isForceStart;
 // should return expired cache or not
-@property(nonatomic,assign) BOOL shouldExpiredCacheValid; // default: NO
+@property (nonatomic, assign) BOOL shouldExpiredCacheValid; // default: NO
 
 
 /**
@@ -91,7 +90,8 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
  @return <#return value description#>
  */
 - (BOOL)forceStart:(NSError **)error;
-- (id)cacheResponse; // always nil
+- (id)cacheResponse:(BOOL *)isCacheValid; // always nil
+- (BOOL)isCacheValid;
 
 // default: parameters = self.parameters, sensitiveData = nil
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
@@ -100,7 +100,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 
 #pragma mark - Batch
 
-@property(nonatomic,copy,readonly) NSArray *requestArray;
+@property (nonatomic, copy, readonly) NSArray *requestArray;
 
 @end
 

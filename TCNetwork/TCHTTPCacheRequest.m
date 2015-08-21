@@ -20,7 +20,6 @@
 
 @dynamic isForceStart;
 
-@synthesize isCacheExpired = _isCacheExpired;
 @synthesize shouldIgnoreCache = _shouldIgnoreCache;
 @synthesize shouldCacheResponse = _shouldCacheResponse;
 @synthesize cacheTimeoutInterval = _cacheTimeoutInterval;
@@ -37,7 +36,7 @@
     return self;
 }
 
-- (id)cacheResponse
+- (id)cacheResponse:(BOOL *)isCacheValid
 {
     if (nil == _cacheResponse) {
         NSString *path = self.cacheFilePath;
@@ -56,13 +55,17 @@
             self.isDataFromCache = nil != _cacheResponse;
         }
     }
+    
+    if (NULL != isCacheValid) {
+        *isCacheValid = self.isCacheValid;
+    }
+    
     return _cacheResponse;
 }
 
 - (void)clearCacheResponse
 {
     [self requestRespondReset];
-    self.isCacheExpired = self.cacheTimeoutInterval == 0;
 }
 
 - (id)responseObject
@@ -114,7 +117,7 @@
     [self requestRespondReset];
 }
 
-- (BOOL)isCacheAvailable
+- (BOOL)isCacheValid
 {
     NSString *path = self.cacheFilePath;
     BOOL isDir = NO;
@@ -128,7 +131,6 @@
         return YES;
     }
     else {
-        self.isCacheExpired = -attributes.fileModificationDate.timeIntervalSinceNow >= self.cacheTimeoutInterval;
         return NO;
     }
 }
@@ -157,8 +159,8 @@
         return [super start:error];
     }
     
-    if (nil != self.cacheResponse) {
-        if (self.isCacheAvailable) {
+    if (nil != [self cacheResponse:NULL]) {
+        if (self.isCacheValid) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self cacheRequestCallback];
                 self.resultBlock = nil;
@@ -185,8 +187,8 @@
 - (BOOL)forceStart:(NSError **)error
 {
     self.isForceStart = YES;
-    if (!self.shouldIgnoreCache && nil != self.cacheResponse
-        && (self.isCacheAvailable || self.shouldExpiredCacheValid)) {
+    if (!self.shouldIgnoreCache && nil != [self cacheResponse:NULL]
+        && (self.isCacheValid || self.shouldExpiredCacheValid)) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self cacheRequestCallback];
         });
