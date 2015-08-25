@@ -33,7 +33,6 @@
 @dynamic shouldIgnoreCache;
 @dynamic shouldCacheResponse;
 @dynamic cacheTimeoutInterval;
-@dynamic isDataFromCache;
 @dynamic shouldExpiredCacheValid;
 
 @synthesize isForceStart = _isForceStart;
@@ -63,9 +62,9 @@
     return kTCHTTPRequestStateExecuting == _state;
 }
 
-- (id)responseObject
+- (id<NSCoding>)responseObject
 {
-    return nil != _requestOperation ? _requestOperation.responseObject : nil;
+    return nil != _requestOperation ? ((id<NSCoding>)_requestOperation.responseObject) : nil;
 }
 
 - (void)setObserver:(__unsafe_unretained id)observer
@@ -145,7 +144,12 @@
 
 - (BOOL)isCacheValid
 {
-    return NO;
+    return self.cacheState == kTCHTTPCachedResponseStateValid;
+}
+
+- (TCHTTPCachedResponseState)cacheState
+{
+    return kTCHTTPCachedResponseStateNone;
 }
 
 - (BOOL)shouldIgnoreCache
@@ -168,7 +172,7 @@
     return NO;
 }
 
-- (id)cacheResponse:(BOOL *)isCacheValid
+- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state
 {
     return nil;
 }
@@ -189,7 +193,7 @@
 }
 
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
-                                  sensitiveData:(id)sensitiveData;
+                                  sensitiveData:(NSObject<NSCopying> *)sensitiveData;
 {
     @throw [NSException exceptionWithName:NSStringFromClass(self.class) reason:@"for subclass to impl" userInfo:nil];
 }

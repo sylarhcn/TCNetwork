@@ -15,6 +15,12 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
     kTCHTTPRequestStateFinished,
 };
 
+typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
+    kTCHTTPCachedResponseStateNone = 0,
+    kTCHTTPCachedResponseStateValid,
+    kTCHTTPCachedResponseStateExpired,
+};
+
 
 
 @protocol TCHTTPRequestDelegate;
@@ -63,7 +69,7 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 @property (nonatomic, assign) BOOL shouldUseCDN;
 @property (nonatomic, assign) BOOL isRetainByRequestPool;
 
-- (id)responseObject;
+- (id<NSCoding>)responseObject;
 // for override
 - (void)requestRespondSuccess;
 - (void)requestRespondFailed;
@@ -75,7 +81,6 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 @property (nonatomic, assign) BOOL shouldIgnoreCache; // always: YES
 @property (nonatomic, assign) BOOL shouldCacheResponse; // always: NO
 @property (nonatomic, assign) NSTimeInterval cacheTimeoutInterval; // always: 0, expired anytime
-@property (nonatomic, assign) BOOL isDataFromCache;
 @property (nonatomic, assign) BOOL isForceStart;
 // should return expired cache or not
 @property (nonatomic, assign) BOOL shouldExpiredCacheValid; // default: NO
@@ -90,12 +95,16 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
  @return <#return value description#>
  */
 - (BOOL)forceStart:(NSError **)error;
-- (id)cacheResponse:(BOOL *)isCacheValid; // always nil
+
+- (BOOL)isDataFromCache;
 - (BOOL)isCacheValid;
+- (TCHTTPCachedResponseState)cacheState;
+- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state; // always nil
+
 
 // default: parameters = self.parameters, sensitiveData = nil
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
-                                  sensitiveData:(id)sensitiveData;
+                                  sensitiveData:(NSObject<NSCopying> *)sensitiveData;
 
 
 #pragma mark - Batch
@@ -110,13 +119,13 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestState) {
 @protocol TCHTTPRequestCenterProtocol <NSObject>
 
 @required
-
 - (void)addObserver:(__unsafe_unretained id)observer forRequest:(id<TCHTTPRequestProtocol>)request;
 - (void)removeRequestObserver:(__unsafe_unretained id)observer forIdentifier:(id<NSCopying>)identifier;
 - (void)removeRequestObserver:(__unsafe_unretained id)observer;
 
 - (BOOL)addRequest:(TCHTTPRequest *)request error:(NSError **)error;
 - (NSString *)buildRequestUrlForRequest:(id<TCHTTPRequestProtocol>)request;
+
 
 @optional
 - (NSArray *)requestsForObserver:(__unsafe_unretained id)observer;

@@ -15,7 +15,7 @@
     @private
     NSDictionary *_parametersForCachePathFilter;
     id _sensitiveDataForCachePathFilter;
-    id _cacheResponse;
+    id _cachedResponse;
 }
 
 @dynamic isForceStart;
@@ -23,7 +23,6 @@
 @synthesize shouldIgnoreCache = _shouldIgnoreCache;
 @synthesize shouldCacheResponse = _shouldCacheResponse;
 @synthesize cacheTimeoutInterval = _cacheTimeoutInterval;
-@synthesize isDataFromCache = _isDataFromCache;
 @synthesize shouldExpiredCacheValid = _shouldExpiredCacheValid;
 
 
@@ -36,42 +35,58 @@
     return self;
 }
 
-- (id)cacheResponse:(BOOL *)isCacheValid
+- (BOOL)isDataFromCache
 {
-    if (nil == _cacheResponse) {
+    return nil != _cachedResponse;
+}
+
+- (id)cachedResponseWithoutValidate
+{
+    if (nil == _cachedResponse) {
         NSString *path = self.cacheFilePath;
+        if (nil == path) {
+            return nil;
+        }
+        
         BOOL isDir = NO;
         if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir] || isDir) {
             return nil;
         }
         
         @try {
-            _cacheResponse = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
+            _cachedResponse = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
         }
         @catch (NSException *exception) {
             NSLog(@"%@", exception);
         }
-        @finally {
-            self.isDataFromCache = nil != _cacheResponse;
-        }
     }
     
-    if (NULL != isCacheValid) {
-        *isCacheValid = self.isCacheValid;
-    }
-    
-    return _cacheResponse;
+    return _cachedResponse;
 }
 
-- (void)clearCacheResponse
+- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state
+{
+    TCHTTPCachedResponseState cacheState = self.cacheState;
+    if (NULL != state) {
+        *state = cacheState;
+    }
+    
+    if (cacheState == kTCHTTPCachedResponseStateValid || (force && cacheState != kTCHTTPCachedResponseStateNone)) {
+        return self.cachedResponseWithoutValidate;
+    }
+    
+    return nil;
+}
+
+- (void)clearCachedResponse
 {
     [self requestRespondReset];
 }
 
-- (id)responseObject
+- (id<NSCoding>)responseObject
 {
-    if (nil != _cacheResponse) {
-        return _cacheResponse;
+    if (nil != _cachedResponse) {
+        return _cachedResponse;
     }
     return [super responseObject];
 }
@@ -82,30 +97,44 @@
 }
 
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters
-                                  sensitiveData:(id)sensitiveData;
+                                  sensitiveData:(NSObject<NSCopying> *)sensitiveData;
 {
-    _parametersForCachePathFilter = [parameters copy];
-    _sensitiveDataForCachePathFilter = sensitiveData;
+    _parametersForCachePathFilter = parameters.copy;
+    _sensitiveDataForCachePathFilter = sensitiveData.copy;
 }
 
+
+- (BOOL)validateResponseObject
+{
+    id responseObject = self.responseObject;
+    if (nil == responseObject || (NSNull *)responseObject == NSNull.null) {
+        return NO;
+    }
+    
+    if ([responseObject isKindOfClass:NSDictionary.class]) {
+        return [(NSDictionary *)responseObject count] > 0;
+    }
+    
+    return YES;
+}
 
 - (void)requestRespondReset
 {
     [super requestRespondReset];
-    _cacheResponse = nil;
-    self.isDataFromCache = NO;
+    _cachedResponse = nil;
 }
 
 - (void)requestRespondSuccess
 {
     [super requestRespondSuccess];
     
-    [self clearCacheResponse];
+    // !!!: must be called before self.validateResponseObject called, below
+    [self clearCachedResponse];
     
-    if (self.shouldCacheResponse && self.cacheTimeoutInterval != 0) {
+    if (self.shouldCacheResponse && self.cacheTimeoutInterval != 0 && self.validateResponseObject) {
         NSString *path = self.cacheFilePath;
         if (nil != path
-            && ![NSKeyedArchiver archiveRootObject:self.responseObject toFile:self.cacheFilePath]) {
+            && ![NSKeyedArchiver archiveRootObject:self.responseObject toFile:path]) {
             NSAssert(false, @"write response failed.");
         }
     }
@@ -117,21 +146,25 @@
     [self requestRespondReset];
 }
 
-- (BOOL)isCacheValid
+- (TCHTTPCachedResponseState)cacheState
 {
     NSString *path = self.cacheFilePath;
+    if (nil == path) {
+        return kTCHTTPCachedResponseStateNone;
+    }
+    
     BOOL isDir = NO;
     if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir] || isDir) {
-        return NO;
+        return kTCHTTPCachedResponseStateNone;
     }
     
     NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:NULL];
     
     if (nil != attributes && (self.cacheTimeoutInterval < 0 || -attributes.fileModificationDate.timeIntervalSinceNow < self.cacheTimeoutInterval)) {
-        return YES;
+        return kTCHTTPCachedResponseStateValid;
     }
     else {
-        return NO;
+        return kTCHTTPCachedResponseStateExpired;
     }
 }
 
@@ -159,8 +192,8 @@
         return [super start:error];
     }
     
-    if (nil != [self cacheResponse:NULL]) {
-        if (self.isCacheValid) {
+    if (nil != self.cachedResponseWithoutValidate) {
+        if (kTCHTTPCachedResponseStateValid == self.cacheState) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self cacheRequestCallback];
                 self.resultBlock = nil;
@@ -187,8 +220,9 @@
 - (BOOL)forceStart:(NSError **)error
 {
     self.isForceStart = YES;
-    if (!self.shouldIgnoreCache && nil != [self cacheResponse:NULL]
-        && (self.isCacheValid || self.shouldExpiredCacheValid)) {
+    if (!self.shouldIgnoreCache
+        && (self.shouldExpiredCacheValid || kTCHTTPCachedResponseStateValid == self.cacheState)
+        && nil != self.cachedResponseWithoutValidate) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self cacheRequestCallback];
         });
@@ -220,34 +254,40 @@
     }
     
     NSParameterAssert(path);
-    [self createDiretoryForCachePath:path];
-    return [path stringByAppendingPathComponent:self.cacheFileName];
-}
-
-- (void)createDiretoryForCachePath:(NSString *)path
-{
-    if (nil == path) {
-        return;
+    if ([self createDiretoryForCachePath:path]) {
+        return [path stringByAppendingPathComponent:self.cacheFileName];
     }
     
-    NSFileManager *fileManager = [NSFileManager defaultManager];
+    return nil;
+}
+
+- (BOOL)createDiretoryForCachePath:(NSString *)path
+{
+    if (nil == path) {
+        return NO;
+    }
+    
+    NSFileManager *fileManager = NSFileManager.defaultManager;
     BOOL isDir = NO;
     if ([fileManager fileExistsAtPath:path isDirectory:&isDir]) {
         if (isDir) {
-            return;
+            return YES;
         }
         else {
             [fileManager removeItemAtPath:path error:NULL];
         }
     }
     
-    if ([[NSFileManager defaultManager] createDirectoryAtPath:path
-                                  withIntermediateDirectories:YES
-                                                   attributes:nil
-                                                        error:NULL]) {
+    if ([fileManager createDirectoryAtPath:path
+               withIntermediateDirectories:YES
+                                attributes:nil
+                                     error:NULL]) {
         
         [[NSURL fileURLWithPath:path] setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:NULL];
+        return YES;
     }
+    
+    return NO;
 }
 
 @end
