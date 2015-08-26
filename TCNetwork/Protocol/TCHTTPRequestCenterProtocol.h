@@ -25,6 +25,8 @@ typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
 
 @protocol TCHTTPRequestDelegate;
 @protocol TCHTTPResponseValidator;
+@protocol TCHTTPRequestCenterProtocol;
+
 
 @protocol TCHTTPRequestProtocol <NSObject>
 
@@ -36,6 +38,7 @@ typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
 @property (nonatomic, copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL success);
 
 @property (nonatomic, strong) id<TCHTTPResponseValidator> responseValidator;
+@property (nonatomic, weak) id<TCHTTPRequestCenterProtocol> requestAgent;
 
 @property (nonatomic, copy) NSString *requestIdentifier;
 @property (atomic, assign) TCHTTPRequestState state;
@@ -133,6 +136,8 @@ typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
 
 - (NSString *)cachePathForResponse;
 - (void)removeAllCachedResponse;
+
+- (id<TCHTTPResponseValidator>)responseValidatorForRequest:(id<TCHTTPRequestProtocol>)request;
 
 
 @end

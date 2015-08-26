@@ -294,7 +294,7 @@
 }
 
 
-#pragma mark -
+#pragma mark - TCHTTPRequestCenterProtocol
 
 - (void)addObserver:(__unsafe_unretained id)observer forRequest:(id<TCHTTPRequestProtocol>)request
 {
@@ -409,6 +409,14 @@
     return [baseUrl URLByAppendingPathComponent:queryUrl].absoluteString;
 }
 
+- (id<TCHTTPResponseValidator>)responseValidatorForRequest:(id<TCHTTPRequestProtocol>)request
+{
+    return [[self.responseValidorClass alloc] init];
+}
+
+
+#pragma mark - 
+
 - (void)handleRequestResult:(id<TCHTTPRequestProtocol>)request success:(BOOL)success error:(NSError *)error
 {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -478,7 +486,6 @@
     request.requestAgent = self;
     request.apiUrl = apiUrl;
     request.baseUrl = host;
-    request.responseValidator = [[self.responseValidorClass alloc] init];
     
     return request;
 }
@@ -489,7 +496,6 @@
     request.requestAgent = self;
     request.apiUrl = apiUrl;
     request.baseUrl = host;
-    request.responseValidator = [[self.responseValidorClass alloc] init];
     
     return request;
 }

@@ -99,6 +99,17 @@
     return _downloadIdentifier;
 }
 
+- (id<TCHTTPResponseValidator>)responseValidator
+{
+    if (nil == _responseValidator
+        && nil != self.requestAgent
+        && [self.requestAgent respondsToSelector:@selector(responseValidatorForRequest:)]) {
+        _responseValidator = [self.requestAgent responseValidatorForRequest:self];
+    }
+    
+    return _responseValidator;
+}
+
 
 - (BOOL)start:(NSError **)error
 {
