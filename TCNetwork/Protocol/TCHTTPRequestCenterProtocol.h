@@ -22,6 +22,19 @@ typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
 };
 
 
+typedef NS_ENUM(NSInteger, TCHTTPRequestMethod) {
+    kTCHTTPRequestMethodGet = 0,
+    kTCHTTPRequestMethodPost,
+    kTCHTTPRequestMethodHead,
+    kTCHTTPRequestMethodPut,
+    kTCHTTPRequestMethodDelete,
+    kTCHTTPRequestMethodPatch,
+    kTCHTTPRequestMethodDownload,
+};
+
+
+extern NSInteger const kTCHTTPRequestCacheNeverExpired;
+
 
 @protocol TCHTTPRequestDelegate;
 @protocol TCHTTPResponseValidator;
@@ -70,6 +83,7 @@ typedef NS_ENUM(NSInteger, TCHTTPCachedResponseState) {
 @property (nonatomic, copy) NSString *cdnUrl; // "http://sdfd/oo"
 
 @property (nonatomic, assign) BOOL shouldUseCDN;
+@property (nonatomic, assign) TCHTTPRequestMethod requestMethod;
 @property (nonatomic, assign) BOOL isRetainByRequestPool;
 
 - (id<NSCoding>)responseObject;

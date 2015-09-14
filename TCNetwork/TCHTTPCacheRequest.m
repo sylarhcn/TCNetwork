@@ -48,13 +48,26 @@
             return nil;
         }
         
+        NSFileManager *fileMngr = NSFileManager.defaultManager;
         BOOL isDir = NO;
-        if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir] || isDir) {
+        if (![fileMngr fileExistsAtPath:path isDirectory:&isDir] || isDir) {
             return nil;
         }
         
         @try {
-            _cachedResponse = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
+            if (self.requestMethod != kTCHTTPRequestMethodDownload) {
+                _cachedResponse = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
+            }
+            else {
+               // copy download file to tmp file
+                NSString *tmpPath = self.tmpFilePath;
+                if ([fileMngr fileExistsAtPath:tmpPath]) {
+                    _cachedResponse = tmpPath;
+                }
+                else if ([fileMngr copyItemAtPath:path toPath:tmpPath error:NULL]) {
+                    _cachedResponse = tmpPath;
+                }
+            }
         }
         @catch (NSException *exception) {
             NSLog(@"%@", exception);
@@ -121,6 +134,11 @@
 - (void)requestRespondReset
 {
     [super requestRespondReset];
+    
+    if (self.requestMethod == kTCHTTPRequestMethodDownload) {
+        // delete tmp download file
+        [[NSFileManager defaultManager] removeItemAtPath:self.tmpFilePath error:NULL];
+    }
     _cachedResponse = nil;
 }
 
@@ -131,7 +149,7 @@
     // !!!: must be called before self.validateResponseObject called, below
     [self clearCachedResponse];
     
-    if (self.shouldCacheResponse && self.cacheTimeoutInterval != 0 && self.validateResponseObject) {
+    if (self.requestMethod != kTCHTTPRequestMethodDownload && self.shouldCacheResponse && self.cacheTimeoutInterval != 0 && self.validateResponseObject) {
         NSString *path = self.cacheFilePath;
         if (nil != path
             && ![NSKeyedArchiver archiveRootObject:self.responseObject toFile:path]) {
@@ -154,13 +172,21 @@
     }
     
     BOOL isDir = NO;
-    if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir] || isDir) {
+    NSFileManager *fileMngr = NSFileManager.defaultManager;
+    if (![fileMngr fileExistsAtPath:path isDirectory:&isDir] || isDir) {
         return kTCHTTPCachedResponseStateNone;
     }
     
-    NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:NULL];
+    NSDictionary *attributes = [fileMngr attributesOfItemAtPath:path error:NULL];
     
     if (nil != attributes && (self.cacheTimeoutInterval < 0 || -attributes.fileModificationDate.timeIntervalSinceNow < self.cacheTimeoutInterval)) {
+        if (self.requestMethod == kTCHTTPRequestMethodDownload) {
+            [self cachedResponseWithoutValidate];
+            if (nil == _cachedResponse || ![_cachedResponse isKindOfClass:NSString.class] || ![fileMngr fileExistsAtPath:_cachedResponse]) {
+                return kTCHTTPCachedResponseStateNone;
+            }
+        }
+        
         return kTCHTTPCachedResponseStateValid;
     }
     else {
@@ -197,6 +223,7 @@
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self cacheRequestCallback];
                 self.resultBlock = nil;
+                self.downloadProgressBlock = nil;
             });
             
             return YES;
@@ -231,6 +258,7 @@
     return [super start:error];
 }
 
+
 #pragma mark -
 
 - (NSString *)cacheFileName
@@ -248,6 +276,10 @@
 
 - (NSString *)cacheFilePath
 {
+    if (self.requestMethod == kTCHTTPRequestMethodDownload) {
+        return self.downloadTargetPath;
+    }
+    
     NSString *path = nil;
     if (nil != self.requestAgent && [self.requestAgent respondsToSelector:@selector(cachePathForResponse)]) {
         path = [self.requestAgent cachePathForResponse];
@@ -259,6 +291,21 @@
     }
     
     return nil;
+}
+
+- (NSString *)tmpFilePath
+{
+    NSString *dir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"TCHTTPRequestCache"];
+    
+    if (![[NSFileManager defaultManager] createDirectoryAtPath:dir
+                                   withIntermediateDirectories:YES
+                                                    attributes:nil
+                                                         error:NULL]) {
+        NSAssert(false, @"create directory failed.");
+        dir = nil;
+    }
+
+    return [dir stringByAppendingPathComponent:self.cacheFileName];
 }
 
 - (BOOL)createDiretoryForCachePath:(NSString *)path

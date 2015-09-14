@@ -48,7 +48,7 @@
 - (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host cache:(BOOL)cache;
 - (TCHTTPRequest *)requestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host;
 - (TCHTTPRequest *)cacheRequestWithMethod:(TCHTTPRequestMethod)method apiUrl:(NSString *)apiUrl host:(NSString *)host;
-- (TCHTTPRequest *)requestForDownload:(NSString *)url to:(NSString *)dstPath;
+- (TCHTTPRequest *)requestForDownload:(NSString *)url to:(NSString *)dstPath cache:(BOOL)cache;
 - (TCHTTPRequest *)batchRequestWithRequests:(NSArray *)requests;
 
 @end

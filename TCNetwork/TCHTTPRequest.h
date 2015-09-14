@@ -11,16 +11,6 @@
 #import "TCHTTPRequestCenterProtocol.h"
 
 
-typedef NS_ENUM(NSInteger, TCHTTPRequestMethod) {
-    kTCHTTPRequestMethodGet = 0,
-    kTCHTTPRequestMethodPost,
-    kTCHTTPRequestMethodHead,
-    kTCHTTPRequestMethodPut,
-    kTCHTTPRequestMethodDelete,
-    kTCHTTPRequestMethodPatch,
-    kTCHTTPRequestMethodDownload,
-};
-
 typedef NS_ENUM(NSInteger, TCHTTPRequestSerializerType) {
     kTCHTTPRequestSerializerTypeHTTP = 0,
     kTCHTTPRequestSerializerTypeJSON,

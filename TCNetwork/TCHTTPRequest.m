@@ -11,6 +11,9 @@
 #import "TCHTTPRequestHelper.h"
 
 
+NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
+
+
 @interface AFURLConnectionOperation (TCHTTPRequest)
 @property(nonatomic,strong,readwrite) NSURLRequest *request;
 @end
@@ -74,7 +77,7 @@
 
 - (void *)observer
 {
-    if (nil == _observer) {
+    if (NULL == _observer) {
         self.observer = self.delegate ?: (id)self;
     }
     
@@ -215,8 +218,8 @@
 - (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
                                        password:(NSString *)password
 {
-    _authorizationUsername = [username copy];
-    _authorizationPassword = [password copy];
+    _authorizationUsername = username.copy;
+    _authorizationPassword = password.copy;
 }
 
 
@@ -225,7 +228,7 @@
 - (NSString *)description
 {
     NSURLRequest *request = self.requestOperation.request;
-    return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding]];
+    return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@\n response: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding], self.responseObject];
 }
 
 

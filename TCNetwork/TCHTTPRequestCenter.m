@@ -231,7 +231,10 @@
             NSParameterAssert(downloadUrl);
             
             if (nil != downloadUrl && request.downloadTargetPath.length > 0) {
-                NSURLRequest *urlRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:downloadUrl] cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:_requestManager.requestSerializer.timeoutInterval];
+                NSURLRequest *urlRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:downloadUrl]
+                                                            cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                        timeoutInterval:_requestManager.requestSerializer.timeoutInterval];
+                
                 operation = [[AFDownloadRequestOperation alloc] initWithRequest:urlRequest
                                                                  fileIdentifier:request.downloadIdentifier
                                                                      targetPath:request.downloadTargetPath
@@ -411,7 +414,7 @@
 
 - (id<TCHTTPResponseValidator>)responseValidatorForRequest:(id<TCHTTPRequestProtocol>)request
 {
-    return [[self.responseValidorClass alloc] init];
+    return request.requestMethod != kTCHTTPRequestMethodDownload ? [[self.responseValidorClass alloc] init] : nil;
 }
 
 
@@ -509,12 +512,16 @@
     return request;
 }
 
-- (TCHTTPRequest *)requestForDownload:(NSString *)url to:(NSString *)dstPath
+- (TCHTTPRequest *)requestForDownload:(NSString *)url to:(NSString *)dstPath cache:(BOOL)cache
 {
     NSParameterAssert(url);
     NSParameterAssert(dstPath);
     
-    TCHTTPRequest *request = [self requestWithMethod:kTCHTTPRequestMethodDownload apiUrl:url host:nil];
+    if (nil == url || nil == dstPath) {
+        return nil;
+    }
+    
+    TCHTTPRequest *request = [self requestWithMethod:kTCHTTPRequestMethodDownload apiUrl:url host:nil cache:cache];
     request.downloadTargetPath = dstPath;
     
     return request;
