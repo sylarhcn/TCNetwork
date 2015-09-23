@@ -48,18 +48,18 @@
 
 - (BOOL)networkReachable
 {
-    return _requestManager.reachabilityManager.reachable;
+    return self.requestManager.reachabilityManager.reachable;
 }
 
 - (NSInteger)maxConcurrentOperationCount
 {
-    return _requestManager.operationQueue.maxConcurrentOperationCount;
+    return self.requestManager.operationQueue.maxConcurrentOperationCount;
 }
 
 - (void)setMaxConcurrentOperationCount:(NSInteger)maxConcurrentOperationCount
 {
-    @synchronized(_requestManager.operationQueue) {
-        _requestManager.operationQueue.maxConcurrentOperationCount = maxConcurrentOperationCount;
+    @synchronized(self.requestManager.operationQueue) {
+        self.requestManager.operationQueue.maxConcurrentOperationCount = maxConcurrentOperationCount;
     }
 }
 
@@ -75,7 +75,7 @@
 
 - (AFSecurityPolicy *)securityPolicy
 {
-    return nil;
+    return _requestManager.securityPolicy;
 }
 
 
@@ -84,8 +84,14 @@
     self = [super init];
     if (self) {
         _requestPool = [NSMutableDictionary dictionary];
-        
         [[AFNetworkActivityIndicatorManager sharedManager] setEnabled:YES];
+    }
+    return self;
+}
+
+- (AFHTTPRequestOperationManager *)requestManager
+{
+    if (nil == _requestManager) {
         _requestManager = [[AFHTTPRequestOperationManager alloc] init];
         [_requestManager.reachabilityManager startMonitoring];
         AFSecurityPolicy *policy = self.securityPolicy;
@@ -93,7 +99,8 @@
             _requestManager.securityPolicy = policy;
         }
     }
-    return self;
+    
+    return _requestManager;
 }
 
 - (instancetype)initWithBaseURL:(NSURL *)url
@@ -120,27 +127,27 @@
         return NO;
     }
     
-    @synchronized(_requestManager) {
+    @synchronized(self.requestManager) {
         
         if (request.serializerType == kTCHTTPRequestSerializerTypeHTTP) {
-            _requestManager.requestSerializer = [AFHTTPRequestSerializer serializer];
+            self.requestManager.requestSerializer = [AFHTTPRequestSerializer serializer];
         }
         else if (request.serializerType == kTCHTTPRequestSerializerTypeJSON) {
-            _requestManager.requestSerializer = [AFJSONRequestSerializer serializer];
+            self.requestManager.requestSerializer = [AFJSONRequestSerializer serializer];
         }
         
         
         if (nil != self.acceptableContentTypes) {
-            NSMutableSet *set = [_requestManager.responseSerializer.acceptableContentTypes mutableCopy];
+            NSMutableSet *set = self.requestManager.responseSerializer.acceptableContentTypes.mutableCopy;
             [set unionSet:self.acceptableContentTypes];
-            _requestManager.responseSerializer.acceptableContentTypes = set;
+            self.requestManager.responseSerializer.acceptableContentTypes = set;
         }
         
-        _requestManager.requestSerializer.timeoutInterval = MAX(self.timeoutInterval, request.timeoutInterval);
+        self.requestManager.requestSerializer.timeoutInterval = MAX(self.timeoutInterval, request.timeoutInterval);
         
         // if api need server username and password
         if (request.username.length > 0) {
-            [_requestManager.requestSerializer setAuthorizationHeaderFieldWithUsername:request.username
+            [self.requestManager.requestSerializer setAuthorizationHeaderFieldWithUsername:request.username
                                                                               password:request.password];
         }
         
@@ -148,8 +155,8 @@
         NSDictionary *headerFieldValueDic = request.customHeaderValue;
         for (NSString *httpHeaderField in headerFieldValueDic.allKeys) {
             NSString *value = headerFieldValueDic[httpHeaderField];
-            if ([httpHeaderField isKindOfClass:[NSString class]] && [value isKindOfClass:[NSString class]]) {
-                [_requestManager.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
+            if ([httpHeaderField isKindOfClass:NSString.class] && [value isKindOfClass:NSString.class]) {
+                [self.requestManager.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
             }
             else {
                 if (NULL != error) {
@@ -175,7 +182,7 @@
             } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
                 [self handleRequestResult:request success:NO error:error];
             }];
-            [_requestManager.operationQueue addOperation:operation];
+            [self.requestManager.operationQueue addOperation:operation];
         }
         else {
             operation = [self requestOperationFor:request];
@@ -233,7 +240,7 @@
             if (nil != downloadUrl && request.downloadTargetPath.length > 0) {
                 NSURLRequest *urlRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:downloadUrl]
                                                             cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
-                                                        timeoutInterval:_requestManager.requestSerializer.timeoutInterval];
+                                                        timeoutInterval:self.requestManager.requestSerializer.timeoutInterval];
                 
                 operation = [[AFDownloadRequestOperation alloc] initWithRequest:urlRequest
                                                                  fileIdentifier:request.downloadIdentifier
@@ -242,7 +249,7 @@
                 
                 [(AFDownloadRequestOperation *)operation setProgressiveDownloadProgressBlock:request.downloadProgressBlock];
                 [(AFDownloadRequestOperation *)operation setCompletionBlockWithSuccess:successBlock failure:failureBlock];
-                [_requestManager.operationQueue addOperation:operation];
+                [self.requestManager.operationQueue addOperation:operation];
                 
                 request.downloadProgressBlock = nil;
             }
@@ -250,7 +257,7 @@
         }
             
         case kTCHTTPRequestMethodGet: {
-            operation = [_requestManager GET:url parameters:param success:successBlock failure:failureBlock];
+            operation = [self.requestManager GET:url parameters:param success:successBlock failure:failureBlock];
             
             break;
         }
@@ -258,34 +265,34 @@
         case kTCHTTPRequestMethodPost: {
             
             if (nil != request.constructingBodyBlock) {
-                operation = [_requestManager POST:url parameters:param constructingBodyWithBlock:request.constructingBodyBlock success:successBlock failure:failureBlock];
+                operation = [self.requestManager POST:url parameters:param constructingBodyWithBlock:request.constructingBodyBlock success:successBlock failure:failureBlock];
                 request.constructingBodyBlock = nil;
             }
             else {
-                operation = [_requestManager POST:url parameters:param success:successBlock failure:failureBlock];
+                operation = [self.requestManager POST:url parameters:param success:successBlock failure:failureBlock];
             }
             break;
         }
             
         case kTCHTTPRequestMethodHead: {
-            operation = [_requestManager HEAD:url parameters:param success:successBlock failure:failureBlock];
+            operation = [self.requestManager HEAD:url parameters:param success:successBlock failure:failureBlock];
             
             break;
         }
             
         case kTCHTTPRequestMethodPut: {
-            operation = [_requestManager PUT:url parameters:param success:successBlock failure:failureBlock];
+            operation = [self.requestManager PUT:url parameters:param success:successBlock failure:failureBlock];
             
             break;
         }
             
         case kTCHTTPRequestMethodDelete: {
-            operation = [_requestManager DELETE:url parameters:param success:successBlock failure:failureBlock];
+            operation = [self.requestManager DELETE:url parameters:param success:successBlock failure:failureBlock];
             break;
         }
             
         case kTCHTTPRequestMethodPatch: {
-            operation = [_requestManager PATCH:url parameters:param success:successBlock failure:failureBlock];
+            operation = [self.requestManager PATCH:url parameters:param success:successBlock failure:failureBlock];
             break;
         }
             

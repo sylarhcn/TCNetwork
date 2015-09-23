@@ -10,8 +10,8 @@
 
 @interface TCHTTPBatchRequest () <TCHTTPRequestDelegate>
 
-@property(atomic,assign,readwrite) BOOL isCancelled;
-@property(atomic,strong) NSMutableDictionary *finishDic;
+@property (atomic, assign, readwrite) BOOL isCancelled;
+@property (atomic, strong) NSMutableDictionary *finishDic;
 
 @end
 

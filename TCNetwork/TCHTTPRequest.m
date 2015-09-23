@@ -15,12 +15,12 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 
 @interface AFURLConnectionOperation (TCHTTPRequest)
-@property(nonatomic,strong,readwrite) NSURLRequest *request;
+@property (nonatomic, strong, readwrite) NSURLRequest *request;
 @end
 
 @interface TCHTTPRequest ()
 
-@property(atomic,assign,readwrite) BOOL isCancelled;
+@property (atomic, assign, readwrite) BOOL isCancelled;
 
 @end
 

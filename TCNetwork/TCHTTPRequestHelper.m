@@ -118,7 +118,7 @@
         return nil;
     }
     
-    const char *value = [self UTF8String];
+    const char *value = self.UTF8String;
     
     unsigned char outputBuffer[CC_MD5_DIGEST_LENGTH];
     CC_MD5(value, (CC_LONG)strlen(value), outputBuffer);
@@ -133,7 +133,7 @@
 
 - (NSString *)MD5_16
 {
-    NSString *str = [self MD5_32];
+    NSString *str = self.MD5_32;
     return nil != str ? [str substringWithRange:NSMakeRange(8, 16)] : str;
 }
 
