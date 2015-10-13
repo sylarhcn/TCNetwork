@@ -41,6 +41,17 @@
 - (void)registerResponseValidatorClass:(Class)validatorClass;
 
 
+#pragma mark - Custom value in HTTP Head
+
+@property (nonatomic, strong) NSDictionary<NSString *, NSString *> *customHeaderValue;
+
+/**
+ Sets the "Authorization" HTTP header set in request objects made by the HTTP client to a basic authentication value with Base64-encoded username and password. This overwrites any existing value for this header.
+ */
+@property (nonatomic, copy) NSString *authorizationUsername;
+@property (nonatomic, copy) NSString *authorizationPassword;
+
+
 #pragma mark - Making HTTP Requests
 
 //

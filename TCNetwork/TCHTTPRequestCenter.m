@@ -91,12 +91,15 @@
 
 - (AFHTTPRequestOperationManager *)requestManager
 {
-    if (nil == _requestManager) {
-        _requestManager = [[AFHTTPRequestOperationManager alloc] init];
-        [_requestManager.reachabilityManager startMonitoring];
-        AFSecurityPolicy *policy = self.securityPolicy;
-        if (nil != policy) {
-            _requestManager.securityPolicy = policy;
+    @synchronized(self) {
+        if (nil == _requestManager) {
+            
+            _requestManager = [[AFHTTPRequestOperationManager alloc] init];
+            [_requestManager.reachabilityManager startMonitoring];
+            AFSecurityPolicy *policy = self.securityPolicy;
+            if (nil != policy) {
+                _requestManager.securityPolicy = policy;
+            }
         }
     }
     
@@ -127,7 +130,7 @@
         return NO;
     }
     
-    NSDictionary *headerFieldValueDic = request.customHeaderValue;
+    NSDictionary *headerFieldValueDic = self.customHeaderValue;
     for (NSString *httpHeaderField in headerFieldValueDic.allKeys) {
         NSString *value = headerFieldValueDic[httpHeaderField];
         if (![httpHeaderField isKindOfClass:NSString.class] || ![value isKindOfClass:NSString.class]) {
@@ -151,38 +154,41 @@
         return NO;
     }
     
-    @synchronized(self.requestManager) {
+    AFHTTPRequestOperationManager *requestMgr = self.requestManager;
+    @synchronized(requestMgr) {
         
         if (request.serializerType == kTCHTTPRequestSerializerTypeHTTP) {
-            self.requestManager.requestSerializer = [AFHTTPRequestSerializer serializer];
+            requestMgr.requestSerializer = [AFHTTPRequestSerializer serializer];
         }
         else if (request.serializerType == kTCHTTPRequestSerializerTypeJSON) {
-            self.requestManager.requestSerializer = [AFJSONRequestSerializer serializer];
+            requestMgr.requestSerializer = [AFJSONRequestSerializer serializer];
         }
         
         
         if (nil != self.acceptableContentTypes) {
-            NSMutableSet *set = self.requestManager.responseSerializer.acceptableContentTypes.mutableCopy;
+            NSMutableSet *set = requestMgr.responseSerializer.acceptableContentTypes.mutableCopy;
             [set unionSet:self.acceptableContentTypes];
-            self.requestManager.responseSerializer.acceptableContentTypes = set;
+            requestMgr.responseSerializer.acceptableContentTypes = set;
         }
         
-        self.requestManager.requestSerializer.timeoutInterval = MAX(self.timeoutInterval, request.timeoutInterval);
+        requestMgr.requestSerializer.timeoutInterval = MAX(self.timeoutInterval, request.timeoutInterval);
         
         // if api need server username and password
-        if (request.username.length > 0) {
-            [self.requestManager.requestSerializer setAuthorizationHeaderFieldWithUsername:request.username password:request.password];
+        if (self.authorizationUsername.length > 0) {
+            [requestMgr.requestSerializer setAuthorizationHeaderFieldWithUsername:self.authorizationUsername password:self.authorizationPassword];
+        }
+        else {
+            [requestMgr.requestSerializer clearAuthorizationHeader];
         }
         
         // if api need add custom value to HTTPHeaderField
-        NSDictionary *headerFieldValueDic = request.customHeaderValue;
+        NSDictionary *headerFieldValueDic = self.customHeaderValue;
         for (NSString *httpHeaderField in headerFieldValueDic.allKeys) {
             NSString *value = headerFieldValueDic[httpHeaderField];
-            [self.requestManager.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
+            [requestMgr.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
         }
         
-        AFHTTPRequestOperation *operation = [self requestOperationFor:request];
-        
+        AFHTTPRequestOperation *operation = [self requestOperationFor:request requestManager:requestMgr];
         BOOL success = nil != operation;
         if (success) {
             
@@ -205,7 +211,7 @@
 }
 
 
-- (AFHTTPRequestOperation *)requestOperationFor:(TCHTTPRequest *)request
+- (AFHTTPRequestOperation *)requestOperationFor:(TCHTTPRequest *)request requestManager:(AFHTTPRequestOperationManager *)requestMgr
 {
     AFHTTPRequestOperation *operation = nil;
     
@@ -222,7 +228,7 @@
     if (nil != customUrlRequest) {
         operation = [[AFHTTPRequestOperation alloc] initWithRequest:customUrlRequest];
         [operation setCompletionBlockWithSuccess:successBlock failure:failureBlock];
-        [self.requestManager.operationQueue addOperation:operation];
+        [requestMgr.operationQueue addOperation:operation];
         return operation;
     }
     
@@ -460,7 +466,6 @@
         dispatch_async(dispatch_get_main_queue(), block);
     }
 }
-
 
 #pragma mark - Making HTTP Requests
 

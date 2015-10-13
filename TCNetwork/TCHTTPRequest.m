@@ -28,8 +28,6 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 @implementation TCHTTPRequest
 {
     @private
-    NSString *_authorizationUsername;
-    NSString *_authorizationPassword;
     void *_observer;
 }
 
@@ -245,26 +243,6 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
                                   sensitiveData:(NSObject<NSCopying> *)sensitiveData;
 {
     @throw [NSException exceptionWithName:NSStringFromClass(self.class) reason:@"for subclass to impl" userInfo:nil];
-}
-
-
-#pragma mark - Custom
-
-- (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
-                                       password:(NSString *)password
-{
-    _authorizationUsername = username.copy;
-    _authorizationPassword = password.copy;
-}
-
-- (NSString *)username
-{
-    return _authorizationUsername;
-}
-
-- (NSString *)password
-{
-    return _authorizationPassword;
 }
 
 #pragma mark - Helper

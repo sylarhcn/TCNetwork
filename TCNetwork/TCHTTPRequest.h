@@ -113,21 +113,5 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 @property (nonatomic, strong) NSURLRequest *customUrlRequest;
 
 
-// FIXME: refactor into requestAgent
-// custom value in HTTP Head
-@property (nonatomic, strong) NSDictionary<NSString *, NSString *> *customHeaderValue;
-@property (nonatomic, copy, readonly) NSString *username;
-@property (nonatomic, copy, readonly) NSString *password;
-
-/**
- Sets the "Authorization" HTTP header set in request objects made by the HTTP client to a basic authentication value with Base64-encoded username and password. This overwrites any existing value for this header.
- 
- @param username The HTTP basic auth username
- @param password The HTTP basic auth password
- */
-- (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
-                                       password:(NSString *)password;
-
-
 @end
 
