@@ -37,6 +37,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 @dynamic shouldCacheResponse;
 @dynamic cacheTimeoutInterval;
 @dynamic shouldExpiredCacheValid;
+@dynamic shouldCacheEmptyResponse;
 
 @synthesize isForceStart = _isForceStart;
 @synthesize isRetainByRequestPool = _isRetainByRequestPool;
@@ -114,6 +115,18 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 }
 
 
+- (BOOL)canStart:(NSError **)error
+{
+    NSParameterAssert(self.requestAgent);
+    
+    if (nil != self.requestAgent && [self.requestAgent respondsToSelector:@selector(canAddRequest:error:)]) {
+        return [self.requestAgent canAddRequest:self error:error];
+    }
+    
+    return NO;
+}
+
+
 - (BOOL)start:(NSError **)error
 {
     NSParameterAssert(self.requestAgent);
@@ -186,22 +199,44 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     return NO;
 }
 
-- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state
-{
-    return nil;
-}
-
-- (void)requestRespondSuccess
+- (void)cachedResponseByForce:(BOOL)force result:(void(^)(id response, TCHTTPCachedResponseState state))result
 {
     
 }
 
-- (void)requestRespondFailed
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish
 {
+#ifndef TC_IOS_PUBLISH
+    if (!isValid) {
+        NSLog(@"%@\n \nERROR: %@", self, self.responseValidator.error);
+    }
+#endif
     
+    __weak typeof(self) wSelf = self;
+    dispatch_block_t block = ^{
+        if (nil != wSelf.delegate && [wSelf.delegate respondsToSelector:@selector(processRequest:success:)]) {
+            [wSelf.delegate processRequest:wSelf success:isValid];
+        }
+
+        if (nil != wSelf.resultBlock) {
+            wSelf.resultBlock(wSelf, isValid);
+            wSelf.resultBlock = nil;
+        }
+        
+        if (nil != finish) {
+            finish();
+        }
+    };
+    
+    if (NSThread.isMainThread) {
+        block();
+    }
+    else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
-- (void)requestRespondReset
+- (void)requestResponseReset
 {
     
 }
@@ -222,6 +257,15 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     _authorizationPassword = password.copy;
 }
 
+- (NSString *)username
+{
+    return _authorizationUsername;
+}
+
+- (NSString *)password
+{
+    return _authorizationPassword;
+}
 
 #pragma mark - Helper
 

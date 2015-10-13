@@ -13,7 +13,7 @@
 
 typedef NS_ENUM(NSInteger, TCHTTPRequestSerializerType) {
     kTCHTTPRequestSerializerTypeHTTP = 0,
-    kTCHTTPRequestSerializerTypeJSON,
+    kTCHTTPRequestSerializerTypeJSON, // encodes parameters as JSON using `NSJSONSerialization`, setting the `Content-Type` of the encoded request to `application/json`
 };
 
 
@@ -109,11 +109,13 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 
 #pragma mark - Custom
 
-// custom value in HTTP Head
-@property (nonatomic, strong) NSDictionary *customHeaderValue;
-// set none nil to ignore requestUrl, argument, requestMethod, serializerType
+// set nonull to ignore requestUrl, argument, requestMethod, serializerType
 @property (nonatomic, strong) NSURLRequest *customUrlRequest;
 
+
+// FIXME: refactor into requestAgent
+// custom value in HTTP Head
+@property (nonatomic, strong) NSDictionary<NSString *, NSString *> *customHeaderValue;
 @property (nonatomic, copy, readonly) NSString *username;
 @property (nonatomic, copy, readonly) NSString *password;
 

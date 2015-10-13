@@ -113,7 +113,7 @@
 }
 
 
-- (BOOL)addRequest:(TCHTTPRequest *)request error:(NSError **)error
+- (BOOL)canAddRequest:(TCHTTPRequest *)request error:(NSError **)error
 {
     NSParameterAssert(request.observer);
     
@@ -124,6 +124,30 @@
                                      userInfo:@{NSLocalizedFailureReasonErrorKey: @"Callback Error",
                                                 NSLocalizedDescriptionKey: @"delegate or resultBlock of request must be set"}];
         }
+        return NO;
+    }
+    
+    NSDictionary *headerFieldValueDic = request.customHeaderValue;
+    for (NSString *httpHeaderField in headerFieldValueDic.allKeys) {
+        NSString *value = headerFieldValueDic[httpHeaderField];
+        if (![httpHeaderField isKindOfClass:NSString.class] || ![value isKindOfClass:NSString.class]) {
+            if (NULL != error) {
+                *error = [NSError errorWithDomain:NSStringFromClass(request.class)
+                                             code:-1
+                                         userInfo:@{NSLocalizedFailureReasonErrorKey: @"HTTP HEAD Error",
+                                                    NSLocalizedDescriptionKey: @"class of key/value in headerFieldValueDictionary should be NSString."}];
+            }
+            
+            return NO;
+        }
+    }
+    
+    return YES;
+}
+
+- (BOOL)addRequest:(TCHTTPRequest *)request error:(NSError **)error
+{
+    if (![self canAddRequest:request error:error]) {
         return NO;
     }
     
@@ -147,46 +171,17 @@
         
         // if api need server username and password
         if (request.username.length > 0) {
-            [self.requestManager.requestSerializer setAuthorizationHeaderFieldWithUsername:request.username
-                                                                              password:request.password];
+            [self.requestManager.requestSerializer setAuthorizationHeaderFieldWithUsername:request.username password:request.password];
         }
         
         // if api need add custom value to HTTPHeaderField
         NSDictionary *headerFieldValueDic = request.customHeaderValue;
         for (NSString *httpHeaderField in headerFieldValueDic.allKeys) {
             NSString *value = headerFieldValueDic[httpHeaderField];
-            if ([httpHeaderField isKindOfClass:NSString.class] && [value isKindOfClass:NSString.class]) {
-                [self.requestManager.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
-            }
-            else {
-                if (NULL != error) {
-                    *error = [NSError errorWithDomain:NSStringFromClass(request.class)
-                                                 code:-1
-                                             userInfo:@{NSLocalizedFailureReasonErrorKey: @"HTTP HEAD Error",
-                                                        NSLocalizedDescriptionKey: @"class of key/value in headerFieldValueDictionary should be NSString."}];
-                }
-                
-                return NO;
-            }
+            [self.requestManager.requestSerializer setValue:value forHTTPHeaderField:httpHeaderField];
         }
         
-        AFHTTPRequestOperation *operation = nil;
-        
-        // if api build custom url request
-        NSURLRequest *customUrlRequest = request.customUrlRequest;
-        
-        if (nil != customUrlRequest) {
-            operation = [[AFHTTPRequestOperation alloc] initWithRequest:customUrlRequest];
-            [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-                [self handleRequestResult:request success:YES error:nil];
-            } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-                [self handleRequestResult:request success:NO error:error];
-            }];
-            [self.requestManager.operationQueue addOperation:operation];
-        }
-        else {
-            operation = [self requestOperationFor:request];
-        }
+        AFHTTPRequestOperation *operation = [self requestOperationFor:request];
         
         BOOL success = nil != operation;
         if (success) {
@@ -212,14 +207,7 @@
 
 - (AFHTTPRequestOperation *)requestOperationFor:(TCHTTPRequest *)request
 {
-    NSString *url = [self buildRequestUrlForRequest:request];
-    NSParameterAssert(url);
-    
-    NSDictionary *param = request.parameters;
-    if ([self.urlFilter respondsToSelector:@selector(filteredParamForParam:)]) {
-        param = [self.urlFilter filteredParamForParam:param];
-    }
-    
+    AFHTTPRequestOperation *operation = nil;
     
     void (^successBlock)() = ^{
         [self handleRequestResult:request success:YES error:nil];
@@ -228,7 +216,24 @@
         [self handleRequestResult:request success:NO error:error];
     };
     
-    AFHTTPRequestOperation *operation = nil;
+    // if api build custom url request
+    NSURLRequest *customUrlRequest = request.customUrlRequest;
+    
+    if (nil != customUrlRequest) {
+        operation = [[AFHTTPRequestOperation alloc] initWithRequest:customUrlRequest];
+        [operation setCompletionBlockWithSuccess:successBlock failure:failureBlock];
+        [self.requestManager.operationQueue addOperation:operation];
+        return operation;
+    }
+    
+    
+    NSString *url = [self buildRequestUrlForRequest:request];
+    NSParameterAssert(url);
+    
+    NSDictionary *param = request.parameters;
+    if ([self.urlFilter respondsToSelector:@selector(filteredParamForParam:)]) {
+        param = [self.urlFilter filteredParamForParam:param];
+    }
     
     switch (request.requestMethod) {
             
@@ -258,7 +263,6 @@
             
         case kTCHTTPRequestMethodGet: {
             operation = [self.requestManager GET:url parameters:param success:successBlock failure:failureBlock];
-            
             break;
         }
             
@@ -276,13 +280,11 @@
             
         case kTCHTTPRequestMethodHead: {
             operation = [self.requestManager HEAD:url parameters:param success:successBlock failure:failureBlock];
-            
             break;
         }
             
         case kTCHTTPRequestMethodPut: {
             operation = [self.requestManager PUT:url parameters:param success:successBlock failure:failureBlock];
-            
             break;
         }
             
@@ -312,16 +314,16 @@
         return;
     }
     
-    NSUInteger key = (NSUInteger)observer;
+    NSNumber *key = @((NSUInteger)observer);
     
     @synchronized(_requestPool) {
         NSParameterAssert(request);
         
         
-        NSMutableDictionary *dic = _requestPool[@(key)];
+        NSMutableDictionary *dic = _requestPool[key];
         if (nil == dic) {
             dic = [NSMutableDictionary dictionary];
-            _requestPool[@(key)] = dic;
+            _requestPool[key] = dic;
         }
         
         TCHTTPRequest *preRequest = dic[request.requestIdentifier];
@@ -335,13 +337,12 @@
     }
 }
 
-
-- (void)removeForObserver:(void *)observer forIdentifier:(id<NSCopying>)identifier
+- (void)removeRequestObserver:(__unsafe_unretained id)observer forIdentifier:(id<NSCopying>)identifier
 {
-    NSUInteger key = (NSUInteger)observer;
+    NSNumber *key = @((NSUInteger)(__bridge void *)(observer));
     @synchronized(_requestPool) {
         
-        NSMutableDictionary *dic = _requestPool[@(key)];
+        NSMutableDictionary *dic = _requestPool[key];
         
         if (nil != identifier) {
             TCHTTPRequest *request = dic[identifier];
@@ -350,22 +351,16 @@
                 [request cancel];
                 [dic removeObjectForKey:identifier];
                 if (dic.count < 1) {
-                    [_requestPool removeObjectForKey:@(key)];
+                    [_requestPool removeObjectForKey:key];
                 }
             }
         }
         else {
             [dic.allValues setValue:@NO forKeyPath:@"isRetainByRequestPool"];
             [dic.allValues makeObjectsPerformSelector:@selector(cancel)];
-            [_requestPool removeObjectForKey:@(key)];
+            [_requestPool removeObjectForKey:key];
         }
     }
-}
-
-
-- (void)removeRequestObserver:(__unsafe_unretained id)observer forIdentifier:(id<NSCopying>)identifier;
-{
-    [self removeForObserver:(__bridge void *)(observer) forIdentifier:identifier];
 }
 
 - (void)removeRequestObserver:(__unsafe_unretained id)observer
@@ -429,18 +424,12 @@
 
 - (void)handleRequestResult:(id<TCHTTPRequestProtocol>)request success:(BOOL)success error:(NSError *)error
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_block_t block = ^{
         request.state = kTCHTTPRequestStateFinished;
-        
-        // remove from pool
-        if (request.isRetainByRequestPool) {
-            [self removeForObserver:request.observer forIdentifier:request.requestIdentifier];
-        }
-        
-        [request requestRespondReset];
+        [request requestResponseReset];
         
         BOOL isValid = success;
-            
+        
         if (nil != request.responseValidator) {
             if (isValid) {
                 if ([request.responseValidator respondsToSelector:@selector(validateHTTPResponse:fromCache:)]) {
@@ -455,26 +444,21 @@
                 request.responseValidator.error = error;
             }
         }
-        
-        if (isValid) {
-            [request requestRespondSuccess];
-        }
-        else {
-            [request requestRespondFailed];
-#ifndef TC_IOS_PUBLISH
-            NSLog(@"%@\n RESPONSE:%@ \nERROR: %@", request, request.responseObject, error);
-#endif
-        }
-        
-        if (nil != request.delegate && [request.delegate respondsToSelector:@selector(processRequest:success:)]) {
-            [request.delegate processRequest:request success:isValid];
-        }
-        
-        if (nil != request.resultBlock) {
-            request.resultBlock(request, isValid);
-            request.resultBlock = nil;
-        }
-    });
+
+        [request requestResponded:isValid finish:^{
+            // remove from pool
+            if (request.isRetainByRequestPool) {
+                [self removeRequestObserver:request.observer forIdentifier:request.requestIdentifier];
+            }
+        }];
+    };
+    
+    if (NSThread.isMainThread) {
+        block();
+    }
+    else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
 

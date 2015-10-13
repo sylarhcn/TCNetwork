@@ -21,16 +21,12 @@
 /**
  @brief	fire a request regardless of cache available
  if cache is available, callback then fire a request.
- 
- @param error [OUT] <#error description#>
- 
- @return <#return value description#>
  */
 - (BOOL)forceStart:(NSError **)error;
 
 - (BOOL)isDataFromCache;
 - (TCHTTPCachedResponseState)cacheState;
-- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state;
+- (void)cachedResponseByForce:(BOOL)force result:(void(^)(id response, TCHTTPCachedResponseState state))result;
 
 // default: parameters = self.parameters, sensitiveData = nil
 - (void)setCachePathFilterWithRequestParameters:(NSDictionary *)parameters

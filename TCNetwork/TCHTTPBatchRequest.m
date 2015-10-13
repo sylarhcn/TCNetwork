@@ -144,18 +144,17 @@
         [self.requestAgent removeRequestObserver:self.observer forIdentifier:self.requestIdentifier];
     }
     
-    if (isValid) {
-        [self requestRespondSuccess];
-    }
-    
-    if (nil != self.delegate && [self.delegate respondsToSelector:@selector(processRequest:success:)]) {
-        [self.delegate processRequest:self success:isValid];
-    }
-    
-    if (nil != self.resultBlock) {
-        self.resultBlock(self, isValid);
-        self.resultBlock = nil;
-    }
+    __weak typeof(self) wSelf = self;
+    [self requestResponded:isValid finish:^{
+        if (nil != wSelf.delegate && [wSelf.delegate respondsToSelector:@selector(processRequest:success:)]) {
+            [wSelf.delegate processRequest:wSelf success:isValid];
+        }
+        
+        if (nil != wSelf.resultBlock) {
+            wSelf.resultBlock(wSelf, isValid);
+            wSelf.resultBlock = nil;
+        }
+    }];
 }
 
 - (BOOL)checkFinished
