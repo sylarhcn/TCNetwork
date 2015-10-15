@@ -95,7 +95,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 - (NSString *)downloadIdentifier
 {
     if (nil == _downloadIdentifier) {
-        _downloadIdentifier = self.apiUrl.MD5_16;
+        _downloadIdentifier = [TCHTTPRequestHelper MD5_16:self.apiUrl];
     }
     
     return _downloadIdentifier;

@@ -380,7 +380,7 @@
 
     NSString *cacheKey = [NSString stringWithFormat:@"Method:%zd RequestUrl:%@ Parames:%@ Sensitive:%@", self.requestMethod, requestUrl, self.parametersForCachePathFilter, _sensitiveDataForCachePathFilter];
 
-    return cacheKey.MD5_32;
+    return [TCHTTPRequestHelper MD5_32:cacheKey];
 }
 
 - (NSString *)cacheFilePath

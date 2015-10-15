@@ -12,51 +12,6 @@
 
 @implementation TCHTTPRequestHelper
 
-//+ (BOOL)isValue:(id)json confirmType:(id)validatorJson
-//{
-//    if ([json isKindOfClass:[NSDictionary class]] && [validatorJson isKindOfClass:[NSDictionary class]]) {
-//        BOOL result = YES;
-//        NSDictionary *dict = json;
-//        NSDictionary *validator = validatorJson;
-//        
-//        for (NSString *key in validator) {
-//            id value = dict[key];
-//            id type = validator[key];
-//            
-//            if ([value isKindOfClass:[NSDictionary class]] || [value isKindOfClass:[NSArray class]]) {
-//                result = [self isValue:value confirmType:type];
-//                break;
-//            }
-//            else if (nil != value && ![value isKindOfClass:type] && ![value isKindOfClass:[NSNull class]]) {
-//                result = NO;
-//                break;
-//            }
-//        }
-//        
-//        return result;
-//    }
-//    else if ([json isKindOfClass:[NSArray class]] && [validatorJson isKindOfClass:[NSArray class]]) {
-//        BOOL result = YES;
-//        NSArray *validatorArray = (NSArray *)validatorJson;
-//        if (validatorArray.count > 0) {
-//            NSDictionary *type = validatorArray.firstObject;
-//            for (id value in (NSArray *)json) {
-//                result = [self isValue:value confirmType:type];
-//                if (!result) {
-//                    break;
-//                }
-//            }
-//        }
-//        return result;
-//    }
-//    else if ([json isKindOfClass:validatorJson]) {
-//        return YES;
-//    }
-//    else {
-//        return NO;
-//    }
-//}
-
 + (NSString *)urlString:(NSString *)originUrlString appendParameters:(NSDictionary *)parameters
 {
     NSString *url = originUrlString;
@@ -75,16 +30,44 @@
 }
 
 
+#pragma mark - MD5
+
++ (NSString *)MD5_32:(NSString *)str
+{
+    if (str.length < 1) {
+        return nil;
+    }
+    
+    const char *value = str.UTF8String;
+    
+    unsigned char outputBuffer[CC_MD5_DIGEST_LENGTH];
+    CC_MD5(value, (CC_LONG)strlen(value), outputBuffer);
+    
+    NSMutableString *outputString = [[NSMutableString alloc] initWithCapacity:CC_MD5_DIGEST_LENGTH * 2];
+    for (NSInteger count = 0; count < CC_MD5_DIGEST_LENGTH; ++count) {
+        [outputString appendFormat:@"%02x",outputBuffer[count]];
+    }
+    
+    return outputString;
+}
+
++ (NSString *)MD5_16:(NSString *)str
+{
+    NSString *value = [self MD5_32:str];
+    return nil != value ? [value substringWithRange:NSMakeRange(8, 16)] : value;
+}
+
+
 @end
 
 
-@implementation NSDictionary (TCHelper)
+@implementation NSDictionary (TCHTTPRequestHelper)
 
 - (NSString *)convertToHttpQuery
 {
     NSMutableString *queryString = nil;
     if (self.count > 0) {
-        queryString = [[NSMutableString alloc] init];
+        queryString = [NSMutableString string];
         for (NSString *key in self.allKeys) {
             NSString *value = self[key];
             if (nil != value) {
@@ -95,46 +78,6 @@
         }
     }
     return queryString;
-}
-
-- (id)valueForKeyExceptNull:(NSString *)key
-{
-    id obj = [self valueForKey:key];
-    
-    return [NSNull null] == obj ? nil : obj;
-}
-
-
-@end
-
-
-#pragma mark - MD5
-
-@implementation NSString (MD5)
-
-- (NSString *)MD5_32
-{
-    if (self.length < 1) {
-        return nil;
-    }
-    
-    const char *value = self.UTF8String;
-    
-    unsigned char outputBuffer[CC_MD5_DIGEST_LENGTH];
-    CC_MD5(value, (CC_LONG)strlen(value), outputBuffer);
-    
-    NSMutableString *outputString = [[NSMutableString alloc] initWithCapacity:CC_MD5_DIGEST_LENGTH * 2];
-    for (NSInteger count = 0; count < CC_MD5_DIGEST_LENGTH; count++) {
-        [outputString appendFormat:@"%02x",outputBuffer[count]];
-    }
-    
-    return outputString;
-}
-
-- (NSString *)MD5_16
-{
-    NSString *str = self.MD5_32;
-    return nil != str ? [str substringWithRange:NSMakeRange(8, 16)] : str;
 }
 
 @end
