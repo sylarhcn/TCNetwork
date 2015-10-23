@@ -189,8 +189,7 @@
         }
         
         AFHTTPRequestOperation *operation = [self requestOperationFor:request requestManager:requestMgr];
-        BOOL success = nil != operation;
-        if (success) {
+        if (nil != operation) {
             
             request.requestOperation = operation;
             request.state = kTCHTTPRequestStateExecuting;
@@ -198,15 +197,18 @@
             [self addObserver:request.observer forRequest:request];
         }
         else {
-            if (NULL != error) {
-                *error = [NSError errorWithDomain:NSStringFromClass(request.class)
-                                             code:-1
-                                         userInfo:@{NSLocalizedFailureReasonErrorKey: @"Fire Request error",
-                                                    NSLocalizedDescriptionKey: @"generate AFHTTPRequestOperation instances failed."}];
+            if (nil != request.responseValidator) {
+                request.responseValidator.error = [NSError errorWithDomain:NSStringFromClass(request.class)
+                                                                      code:-1
+                                                                  userInfo:@{NSLocalizedFailureReasonErrorKey: @"Fire Request error",
+                                                                             NSLocalizedDescriptionKey: @"generate AFHTTPRequestOperation instances failed."}];
             }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [request requestResponded:NO finish:nil];
+            });
         }
         
-        return success;
+        return YES;
     }
 }
 
@@ -332,7 +334,7 @@
             _requestPool[key] = dic;
         }
         
-        TCHTTPRequest *preRequest = dic[request.requestIdentifier];
+        id<TCHTTPRequestProtocol> preRequest = dic[request.requestIdentifier];
         if (nil != preRequest && preRequest.isRetainByRequestPool) {
             preRequest.isRetainByRequestPool = NO;
             [preRequest cancel];
@@ -351,7 +353,7 @@
         NSMutableDictionary *dic = _requestPool[key];
         
         if (nil != identifier) {
-            TCHTTPRequest *request = dic[identifier];
+            id<TCHTTPRequestProtocol> request = dic[identifier];
             if (nil != request && request.isRetainByRequestPool) {
                 request.isRetainByRequestPool = NO;
                 [request cancel];
