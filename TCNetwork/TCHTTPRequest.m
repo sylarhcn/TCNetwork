@@ -202,7 +202,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     
 }
 
-- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean
 {
 #ifndef TC_IOS_PUBLISH
     if (!isValid) {
@@ -218,7 +218,11 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
         if (nil != wSelf.resultBlock) {
             wSelf.resultBlock(wSelf, isValid);
+        }
+        
+        if (clean) {
             wSelf.resultBlock = nil;
+            wSelf.downloadProgressBlock = nil;
         }
         
         if (nil != finish) {

@@ -21,12 +21,12 @@
 @synthesize requestArray = _requestArray;
 
 
-+ (instancetype)requestWithRequests:(NSArray *)requests
++ (instancetype)requestWithRequests:(NSArray<__kindof TCHTTPRequest *> *)requests
 {
     return [[self alloc] initWithRequests:requests];
 }
 
-- (instancetype)initWithRequests:(NSArray *)requests
+- (instancetype)initWithRequests:(NSArray<__kindof TCHTTPRequest *> *)requests
 {
     self = [self init];
     if (self) {
@@ -144,17 +144,7 @@
         [self.requestAgent removeRequestObserver:self.observer forIdentifier:self.requestIdentifier];
     }
     
-    __weak typeof(self) wSelf = self;
-    [self requestResponded:isValid finish:^{
-        if (nil != wSelf.delegate && [wSelf.delegate respondsToSelector:@selector(processRequest:success:)]) {
-            [wSelf.delegate processRequest:wSelf success:isValid];
-        }
-        
-        if (nil != wSelf.resultBlock) {
-            wSelf.resultBlock(wSelf, isValid);
-            wSelf.resultBlock = nil;
-        }
-    }];
+    [self requestResponded:isValid finish:nil clean:YES];
 }
 
 - (BOOL)checkFinished

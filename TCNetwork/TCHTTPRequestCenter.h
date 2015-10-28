@@ -43,7 +43,7 @@
 
 #pragma mark - Custom value in HTTP Head
 
-@property (nonatomic, strong) NSDictionary<NSString *, NSString *> *customHeaderValue;
+@property (nonatomic, strong) NSDictionary<__kindof NSString *, __kindof NSString *> *customHeaderValue;
 
 /**
  Sets the "Authorization" HTTP header set in request objects made by the HTTP client to a basic authentication value with Base64-encoded username and password. This overwrites any existing value for this header.

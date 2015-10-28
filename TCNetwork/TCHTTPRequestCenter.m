@@ -204,7 +204,7 @@
                                                                              NSLocalizedDescriptionKey: @"generate AFHTTPRequestOperation instances failed."}];
             }
             dispatch_async(dispatch_get_main_queue(), ^{
-                [request requestResponded:NO finish:nil];
+                [request requestResponded:NO finish:nil clean:YES];
             });
         }
         
@@ -458,7 +458,7 @@
             if (request.isRetainByRequestPool) {
                 [self removeRequestObserver:request.observer forIdentifier:request.requestIdentifier];
             }
-        }];
+        } clean:YES];
     };
     
     if (NSThread.isMainThread) {

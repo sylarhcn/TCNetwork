@@ -88,7 +88,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 
 // for override
 - (void)requestResponseReset;
-- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish;
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean;
 
 
 #pragma mark - Cache
@@ -125,7 +125,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 
 #pragma mark - Batch
 
-@property (nonatomic, copy, readonly) NSArray *requestArray;
+@property (nonatomic, copy, readonly) NSArray<id<TCHTTPRequestProtocol>> *requestArray;
 
 @end
 

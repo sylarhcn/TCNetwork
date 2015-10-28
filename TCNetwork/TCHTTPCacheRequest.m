@@ -110,7 +110,7 @@
     _cachedResponse = nil;
 }
 
-- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean
 {
     // !!!: must be called before self.validateResponseObject called, below
     [self requestResponseReset];
@@ -129,19 +129,19 @@
                 }
                 
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [sSelf callSuperRequestResponded:isValid finish:finish];
+                    [sSelf callSuperRequestResponded:isValid finish:finish clean:clean];
                 });
             }
         });
     }
     else {
-        [super requestResponded:isValid finish:finish];
+        [super requestResponded:isValid finish:finish clean:clean];
     }
 }
 
-- (void)callSuperRequestResponded:(BOOL)isValid finish:(dispatch_block_t)finish
+- (void)callSuperRequestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean
 {
-    [super requestResponded:isValid finish:finish];
+    [super requestResponded:isValid finish:finish clean:clean];
 }
 
 
@@ -283,10 +283,9 @@
             if (wSelf.isRetainByRequestPool) {
                 [wSelf.requestAgent removeRequestObserver:wSelf.observer forIdentifier:wSelf.requestIdentifier];
             }
-        }];
-    }
-    else if (isValid) {
-        [super requestResponded:isValid finish:nil];
+        } clean:notFire];
+    } else if (isValid) {
+        [super requestResponded:isValid finish:nil clean:notFire];
     }
 }
 
@@ -297,6 +296,10 @@
 
 - (BOOL)start:(NSError **)error
 {
+    if (self.isForceStart) {
+        return [self forceStart:error];
+    }
+    
     if (self.shouldIgnoreCache) {
         return [super start:error];
     }
@@ -317,8 +320,6 @@
             if (kTCHTTPCachedResponseStateValid == state) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [sSelf cacheRequestCallbackWithoutFiring:YES];
-                    sSelf.resultBlock = nil;
-                    sSelf.downloadProgressBlock = nil;
                 });
             }
             else if (wSelf.shouldExpiredCacheValid) {
