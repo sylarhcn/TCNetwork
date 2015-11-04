@@ -294,6 +294,7 @@
     return [super start:NULL];
 }
 
+
 - (BOOL)start:(NSError **)error
 {
     if (self.isForceStart) {
@@ -333,12 +334,6 @@
     }
     
     return [super start:error];
-}
-
-- (BOOL)startWithResult:(TCRequestResultBlockType)resultBlock error:(NSError **)error
-{
-    self.resultBlock = resultBlock;
-    return [self start:error];
 }
 
 - (BOOL)forceStart:(NSError **)error

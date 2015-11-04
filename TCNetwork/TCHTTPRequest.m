@@ -182,6 +182,11 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     return YES;
 }
 
+- (void)setShouldIgnoreCache:(BOOL)shouldIgnoreCache
+{
+    
+}
+
 - (BOOL)shouldCacheResponse
 {
     return NO;
