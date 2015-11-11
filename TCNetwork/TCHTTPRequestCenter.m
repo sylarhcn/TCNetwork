@@ -8,7 +8,6 @@
 
 #import "TCHTTPRequestCenter.h"
 #import "AFHTTPRequestOperationManager.h"
-#import "AFNetworkActivityIndicatorManager.h"
 #import "AFDownloadRequestOperation.h"
 #import "TCHTTPRequestHelper.h"
 
@@ -84,7 +83,6 @@
     self = [super init];
     if (self) {
         _requestPool = [NSMutableDictionary dictionary];
-        [[AFNetworkActivityIndicatorManager sharedManager] setEnabled:YES];
     }
     return self;
 }
