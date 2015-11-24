@@ -8,7 +8,7 @@
 
 #import "TCHTTPRequest.h"
 
-@interface TCHTTPBatchRequest : TCHTTPRequest
+NS_CLASS_AVAILABLE_IOS(7_0) @interface TCHTTPBatchRequest : TCHTTPRequest
 
 @property (nonatomic, copy, readwrite) NSArray<__kindof TCHTTPRequest *> *requestArray;
 

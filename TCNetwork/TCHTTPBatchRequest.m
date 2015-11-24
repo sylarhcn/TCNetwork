@@ -112,7 +112,6 @@
         request.delegate = nil;
         request.resultBlock = nil;
         request.constructingBodyBlock = nil;
-        request.downloadProgressBlock = nil;
         [request cancel];
     }
 }

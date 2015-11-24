@@ -8,7 +8,7 @@
 
 #import "TCHTTPRequest.h"
 
-@interface TCHTTPCacheRequest : TCHTTPRequest
+NS_CLASS_AVAILABLE_IOS(7_0) @interface TCHTTPCacheRequest : TCHTTPRequest
 
 @property (nonatomic, assign) BOOL shouldIgnoreCache; // default: NO
 @property (nonatomic, assign) BOOL shouldCacheResponse; // default: YES

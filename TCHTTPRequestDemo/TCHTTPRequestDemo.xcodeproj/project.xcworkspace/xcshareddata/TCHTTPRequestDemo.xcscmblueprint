@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "288D5A9F5F009210C0BD1504DF52833F74826D9F",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "D9DD2BF6FC21BA14439B5A4ABA1747823A2D9A09" : 0,
+    "288D5A9F5F009210C0BD1504DF52833F74826D9F" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "ECD873F6-B807-41FD-A6F6-6C77EFF594B3",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "D9DD2BF6FC21BA14439B5A4ABA1747823A2D9A09" : "TCNetworkDependencies\/Networking\/AFDownloadRequestOperation",
+    "288D5A9F5F009210C0BD1504DF52833F74826D9F" : "TCNetwork"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "TCHTTPRequestDemo",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "TCHTTPRequestDemo\/TCHTTPRequestDemo.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:dake\/TCNetwork.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "288D5A9F5F009210C0BD1504DF52833F74826D9F"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:steipete\/AFDownloadRequestOperation.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "D9DD2BF6FC21BA14439B5A4ABA1747823A2D9A09"
+    }
+  ]
+}

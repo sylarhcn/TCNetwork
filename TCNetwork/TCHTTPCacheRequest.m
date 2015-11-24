@@ -34,13 +34,7 @@
 
 + (dispatch_queue_t)responseQueue
 {
-    static dispatch_queue_t s_queue = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        s_queue = dispatch_queue_create("TCHTTPCacheRequest", DISPATCH_QUEUE_CONCURRENT);
-    });
-    
-    return s_queue ?: dispatch_get_main_queue();
+    return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0);
 }
 
 - (instancetype)init
@@ -103,10 +97,6 @@
 
 - (void)requestResponseReset
 {
-    if (self.requestMethod == kTCHTTPRequestMethodDownload) {
-        // delete tmp download file
-        [[NSFileManager defaultManager] removeItemAtPath:self.tmpFilePath error:NULL];
-    }
     _cachedResponse = nil;
 }
 
@@ -167,29 +157,11 @@
             return;
         }
         
-        __weak typeof(self) wSelf = self;
         if (self.requestMethod == kTCHTTPRequestMethodDownload) {
-            // copy download file to tmp file
-            NSString *tmpPath = self.tmpFilePath;
-            if ([fileMngr fileExistsAtPath:tmpPath]) {
-                _cachedResponse = tmpPath;
-                result(_cachedResponse);
-            }
-            else {
-                dispatch_async(self.class.responseQueue, ^{
-                    @autoreleasepool {
-                        if ([fileMngr copyItemAtPath:path toPath:tmpPath error:NULL]) {
-                            __strong typeof(wSelf) sSelf = wSelf;
-                            dispatch_async(dispatch_get_main_queue(), ^{
-                                sSelf.cachedResponse = tmpPath;
-                                result(tmpPath);
-                            });
-                        }
-                    }
-                });
-            }
-        }
-        else {
+            _cachedResponse = path;
+            result(_cachedResponse);
+        } else {
+            __weak typeof(self) wSelf = self;
             dispatch_async(self.class.responseQueue, ^{
                 @autoreleasepool {
                     id cachedResponse = nil;
@@ -210,8 +182,7 @@
                 }
             });
         }
-    }
-    else {
+    } else {
         result(_cachedResponse);
     }
 }
@@ -340,24 +311,25 @@
 {
     self.isForceStart = YES;
     
-    TCHTTPCachedResponseState state = self.cacheState;
-    if (!self.shouldIgnoreCache
-        && (kTCHTTPCachedResponseStateExpired == state || kTCHTTPCachedResponseStateValid == state)) {
-        // !!!: add to pool to prevent self dealloc before cache respond
-        [self.requestAgent addObserver:self.observer forRequest:self];
-        
-        __weak typeof(self) wSelf = self;
-        [self cachedResponseWithoutValidate:^(id response) {
-            __strong typeof(wSelf) sSelf = wSelf;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                BOOL ret = [sSelf callSuperStart];
-                if (nil != response) {
-                    [sSelf cacheRequestCallbackWithoutFiring:!ret];
-                }
-            });
-        }];
-        
-        return [super canStart:error];
+    if (!self.shouldIgnoreCache) {
+        TCHTTPCachedResponseState state = self.cacheState;
+        if (kTCHTTPCachedResponseStateExpired == state || kTCHTTPCachedResponseStateValid == state) {
+            // !!!: add to pool to prevent self dealloc before cache respond
+            [self.requestAgent addObserver:self.observer forRequest:self];
+            
+            __weak typeof(self) wSelf = self;
+            [self cachedResponseWithoutValidate:^(id response) {
+                __strong typeof(wSelf) sSelf = wSelf;
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    BOOL ret = [sSelf callSuperStart];
+                    if (nil != response) {
+                        [sSelf cacheRequestCallbackWithoutFiring:!ret];
+                    }
+                });
+            }];
+            
+            return [super canStart:error];
+        }
     }
     
     return [super start:error];
@@ -382,7 +354,7 @@
 - (NSString *)cacheFilePath
 {
     if (self.requestMethod == kTCHTTPRequestMethodDownload) {
-        return self.downloadTargetPath;
+        return self.downloadDestinationPath;
     }
     
     NSString *path = nil;
@@ -396,21 +368,6 @@
     }
     
     return nil;
-}
-
-- (NSString *)tmpFilePath
-{
-    NSString *dir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"TCHTTPRequestCache"];
-    
-    if (![[NSFileManager defaultManager] createDirectoryAtPath:dir
-                                   withIntermediateDirectories:YES
-                                                    attributes:nil
-                                                         error:NULL]) {
-        NSAssert(false, @"create directory failed.");
-        dir = nil;
-    }
-
-    return [dir stringByAppendingPathComponent:self.cacheFileName];
 }
 
 - (BOOL)createDiretoryForCachePath:(NSString *)path

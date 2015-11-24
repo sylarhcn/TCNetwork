@@ -94,6 +94,7 @@ static void AFNetworkReachabilityCallback(SCNetworkReachabilityRef __unused targ
     AFPostReachabilityStatusChange(flags, (__bridge AFNetworkReachabilityStatusBlock)info);
 }
 
+
 static const void * AFNetworkReachabilityRetainCallback(const void *info) {
     return Block_copy(info);
 }
@@ -116,34 +117,38 @@ static void AFNetworkReachabilityReleaseCallback(const void *info) {
     static AFNetworkReachabilityManager *_sharedManager = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        struct sockaddr_in address;
-        bzero(&address, sizeof(address));
-        address.sin_len = sizeof(address);
-        address.sin_family = AF_INET;
-
-        _sharedManager = [self managerForAddress:&address];
+        _sharedManager = [self manager];
     });
 
     return _sharedManager;
 }
 
-+ (instancetype)managerForDomain:(NSString *)domain {
 #ifndef __clang_analyzer__
++ (instancetype)managerForDomain:(NSString *)domain {
     SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(kCFAllocatorDefault, [domain UTF8String]);
 
     AFNetworkReachabilityManager *manager = [[self alloc] initWithReachability:reachability];
 
     return manager;
-#endif
 }
+#endif
 
-+ (instancetype)managerForAddress:(const void *)address {
 #ifndef __clang_analyzer__
++ (instancetype)managerForAddress:(const void *)address {
     SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, (const struct sockaddr *)address);
     AFNetworkReachabilityManager *manager = [[self alloc] initWithReachability:reachability];
 
     return manager;
+}
 #endif
+
++ (instancetype)manager
+{
+    struct sockaddr_in address;
+    bzero(&address, sizeof(address));
+    address.sin_len = sizeof(address);
+    address.sin_family = AF_INET;
+    return [self managerForAddress:&address];
 }
 
 - (instancetype)initWithReachability:(SCNetworkReachabilityRef)reachability {

@@ -78,9 +78,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 
 @property (nonatomic, copy) NSString *apiUrl; // "getUserInfo/"
 @property (nonatomic, copy) NSString *baseUrl; // "http://eet/oo/"
-@property (nonatomic, copy) NSString *cdnUrl; // "http://sdfd/oo"
 
-@property (nonatomic, assign) BOOL shouldUseCDN;
 @property (nonatomic, assign) TCHTTPRequestMethod requestMethod;
 @property (nonatomic, assign) BOOL isRetainByRequestPool;
 

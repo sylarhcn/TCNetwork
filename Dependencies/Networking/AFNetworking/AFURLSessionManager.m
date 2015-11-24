@@ -22,15 +22,13 @@
 #import "AFURLSessionManager.h"
 #import <objc/runtime.h>
 
-#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090)
-
 static dispatch_queue_t url_session_manager_creation_queue() {
     static dispatch_queue_t af_url_session_manager_creation_queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         af_url_session_manager_creation_queue = dispatch_queue_create("com.alamofire.networking.session.manager.creation", DISPATCH_QUEUE_SERIAL);
     });
-
+    
     return af_url_session_manager_creation_queue;
 }
 
@@ -40,7 +38,7 @@ static dispatch_queue_t url_session_manager_processing_queue() {
     dispatch_once(&onceToken, ^{
         af_url_session_manager_processing_queue = dispatch_queue_create("com.alamofire.networking.session.manager.processing", DISPATCH_QUEUE_CONCURRENT);
     });
-
+    
     return af_url_session_manager_processing_queue;
 }
 
@@ -50,7 +48,7 @@ static dispatch_group_t url_session_manager_completion_group() {
     dispatch_once(&onceToken, ^{
         af_url_session_manager_completion_group = dispatch_group_create();
     });
-
+    
     return af_url_session_manager_completion_group;
 }
 
@@ -121,11 +119,11 @@ typedef void (^AFURLSessionTaskCompletionHandler)(NSURLResponse *response, id re
     if (!self) {
         return nil;
     }
-
+    
     self.mutableData = [NSMutableData data];
-
+    
     self.progress = [NSProgress progressWithTotalUnitCount:0];
-
+    
     return self;
 }
 
@@ -148,12 +146,12 @@ didCompleteWithError:(NSError *)error
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu"
     __strong AFURLSessionManager *manager = self.manager;
-
+    
     __block id responseObject = nil;
-
+    
     __block NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
     userInfo[AFNetworkingTaskDidCompleteResponseSerializerKey] = manager.responseSerializer;
-
+    
     //Performance Improvement from #2672
     NSData *data = nil;
     if (self.mutableData) {
@@ -161,21 +159,21 @@ didCompleteWithError:(NSError *)error
         //We no longer need the reference, so nil it out to gain back some memory.
         self.mutableData = nil;
     }
-
+    
     if (self.downloadFileURL) {
         userInfo[AFNetworkingTaskDidCompleteAssetPathKey] = self.downloadFileURL;
     } else if (data) {
         userInfo[AFNetworkingTaskDidCompleteResponseDataKey] = data;
     }
-
+    
     if (error) {
         userInfo[AFNetworkingTaskDidCompleteErrorKey] = error;
-
+        
         dispatch_group_async(manager.completionGroup ?: url_session_manager_completion_group(), manager.completionQueue ?: dispatch_get_main_queue(), ^{
             if (self.completionHandler) {
                 self.completionHandler(task.response, responseObject, error);
             }
-
+            
             dispatch_async(dispatch_get_main_queue(), ^{
                 [[NSNotificationCenter defaultCenter] postNotificationName:AFNetworkingTaskDidCompleteNotification object:task userInfo:userInfo];
             });
@@ -183,25 +181,25 @@ didCompleteWithError:(NSError *)error
     } else {
         dispatch_async(url_session_manager_processing_queue(), ^{
             NSError *serializationError = nil;
-            responseObject = [manager.responseSerializer responseObjectForResponse:task.response data:data error:&serializationError];
-
             if (self.downloadFileURL) {
                 responseObject = self.downloadFileURL;
+            } else {
+                responseObject = [manager.responseSerializer responseObjectForResponse:task.response data:data error:&serializationError];
             }
-
+            
             if (responseObject) {
                 userInfo[AFNetworkingTaskDidCompleteSerializedResponseKey] = responseObject;
             }
-
+            
             if (serializationError) {
                 userInfo[AFNetworkingTaskDidCompleteErrorKey] = serializationError;
             }
-
+            
             dispatch_group_async(manager.completionGroup ?: url_session_manager_completion_group(), manager.completionQueue ?: dispatch_get_main_queue(), ^{
                 if (self.completionHandler) {
                     self.completionHandler(task.response, responseObject, serializationError);
                 }
-
+                
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [[NSNotificationCenter defaultCenter] postNotificationName:AFNetworkingTaskDidCompleteNotification object:task userInfo:userInfo];
                 });
@@ -217,6 +215,12 @@ didCompleteWithError:(NSError *)error
           dataTask:(__unused NSURLSessionDataTask *)dataTask
     didReceiveData:(NSData *)data
 {
+    NSUInteger length = data.length;
+    long long expectedLength = dataTask.response.expectedContentLength;
+    if(expectedLength != -1) {
+        self.progress.totalUnitCount = expectedLength;
+        self.progress.completedUnitCount += length;
+    }
     [self.mutableData appendData:data];
 }
 
@@ -228,14 +232,16 @@ didFinishDownloadingToURL:(NSURL *)location
 {
     NSError *fileManagerError = nil;
     self.downloadFileURL = nil;
-
+    
     if (self.downloadTaskDidFinishDownloading) {
         self.downloadFileURL = self.downloadTaskDidFinishDownloading(session, downloadTask, location);
         if (self.downloadFileURL) {
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:self.downloadFileURL error:&fileManagerError];
-
+            
             if (fileManagerError) {
-                [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:fileManagerError.userInfo];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:fileManagerError.userInfo];
+                });
             }
         }
     }
@@ -296,33 +302,33 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
      WARNING: Trouble Ahead
      https://github.com/AFNetworking/AFNetworking/pull/2702
      */
-
+    
     if (NSClassFromString(@"NSURLSessionTask")) {
         /**
          iOS 7 and iOS 8 differ in NSURLSessionTask implementation, which makes the next bit of code a bit tricky.
          Many Unit Tests have been built to validate as much of this behavior has possible.
          Here is what we know:
-            - NSURLSessionTasks are implemented with class clusters, meaning the class you request from the API isn't actually the type of class you will get back.
-            - Simply referencing `[NSURLSessionTask class]` will not work. You need to ask an `NSURLSession` to actually create an object, and grab the class from there.
-            - On iOS 7, `localDataTask` is a `__NSCFLocalDataTask`, which inherits from `__NSCFLocalSessionTask`, which inherits from `__NSCFURLSessionTask`.
-            - On iOS 8, `localDataTask` is a `__NSCFLocalDataTask`, which inherits from `__NSCFLocalSessionTask`, which inherits from `NSURLSessionTask`.
-            - On iOS 7, `__NSCFLocalSessionTask` and `__NSCFURLSessionTask` are the only two classes that have their own implementations of `resume` and `suspend`, and `__NSCFLocalSessionTask` DOES NOT CALL SUPER. This means both classes need to be swizzled.
-            - On iOS 8, `NSURLSessionTask` is the only class that implements `resume` and `suspend`. This means this is the only class that needs to be swizzled.
-            - Because `NSURLSessionTask` is not involved in the class hierarchy for every version of iOS, its easier to add the swizzled methods to a dummy class and manage them there.
-        
+         - NSURLSessionTasks are implemented with class clusters, meaning the class you request from the API isn't actually the type of class you will get back.
+         - Simply referencing `[NSURLSessionTask class]` will not work. You need to ask an `NSURLSession` to actually create an object, and grab the class from there.
+         - On iOS 7, `localDataTask` is a `__NSCFLocalDataTask`, which inherits from `__NSCFLocalSessionTask`, which inherits from `__NSCFURLSessionTask`.
+         - On iOS 8, `localDataTask` is a `__NSCFLocalDataTask`, which inherits from `__NSCFLocalSessionTask`, which inherits from `NSURLSessionTask`.
+         - On iOS 7, `__NSCFLocalSessionTask` and `__NSCFURLSessionTask` are the only two classes that have their own implementations of `resume` and `suspend`, and `__NSCFLocalSessionTask` DOES NOT CALL SUPER. This means both classes need to be swizzled.
+         - On iOS 8, `NSURLSessionTask` is the only class that implements `resume` and `suspend`. This means this is the only class that needs to be swizzled.
+         - Because `NSURLSessionTask` is not involved in the class hierarchy for every version of iOS, its easier to add the swizzled methods to a dummy class and manage them there.
+         
          Some Assumptions:
-            - No implementations of `resume` or `suspend` call super. If this were to change in a future version of iOS, we'd need to handle it.
-            - No background task classes override `resume` or `suspend`
+         - No implementations of `resume` or `suspend` call super. If this were to change in a future version of iOS, we'd need to handle it.
+         - No background task classes override `resume` or `suspend`
          
          The current solution:
-            1) Grab an instance of `__NSCFLocalDataTask` by asking an instance of `NSURLSession` for a data task.
-            2) Grab a pointer to the original implementation of `af_resume`
-            3) Check to see if the current class has an implementation of resume. If so, continue to step 4.
-            4) Grab the super class of the current class.
-            5) Grab a pointer for the current class to the current implementation of `resume`.
-            6) Grab a pointer for the super class to the current implementation of `resume`.
-            7) If the current class implementation of `resume` is not equal to the super class implementation of `resume` AND the current implementation of `resume` is not equal to the original implementation of `af_resume`, THEN swizzle the methods
-            8) Set the current class to the super class, and repeat steps 3-8
+         1) Grab an instance of `__NSCFLocalDataTask` by asking an instance of `NSURLSession` for a data task.
+         2) Grab a pointer to the original implementation of `af_resume`
+         3) Check to see if the current class has an implementation of resume. If so, continue to step 4.
+         4) Grab the super class of the current class.
+         5) Grab a pointer for the current class to the current implementation of `resume`.
+         6) Grab a pointer for the super class to the current implementation of `resume`.
+         7) If the current class implementation of `resume` is not equal to the super class implementation of `resume` AND the current implementation of `resume` is not equal to the original implementation of `af_resume`, THEN swizzle the methods
+         8) Set the current class to the super class, and repeat steps 3-8
          */
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
         NSURLSession * session = [NSURLSession sessionWithConfiguration:configuration];
@@ -352,11 +358,11 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
 + (void)swizzleResumeAndSuspendMethodForClass:(Class)theClass {
     Method afResumeMethod = class_getInstanceMethod(self, @selector(af_resume));
     Method afSuspendMethod = class_getInstanceMethod(self, @selector(af_suspend));
-
+    
     if (af_addMethod(theClass, @selector(af_resume), afResumeMethod)) {
         af_swizzleSelector(theClass, @selector(resume), @selector(af_resume));
     }
-
+    
     if (af_addMethod(theClass, @selector(af_suspend), afSuspendMethod)) {
         af_swizzleSelector(theClass, @selector(suspend), @selector(af_suspend));
     }
@@ -425,48 +431,45 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     if (!self) {
         return nil;
     }
-
+    
     if (!configuration) {
         configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
     }
-
+    
     self.sessionConfiguration = configuration;
-
+    
     self.operationQueue = [[NSOperationQueue alloc] init];
     self.operationQueue.maxConcurrentOperationCount = 1;
-
+    
     self.session = [NSURLSession sessionWithConfiguration:self.sessionConfiguration delegate:self delegateQueue:self.operationQueue];
-
+    
     self.responseSerializer = [AFJSONResponseSerializer serializer];
-
+    
     self.securityPolicy = [AFSecurityPolicy defaultPolicy];
-
+    
 #if !TARGET_OS_WATCH
     self.reachabilityManager = [AFNetworkReachabilityManager sharedManager];
 #endif
-
+    
     self.mutableTaskDelegatesKeyedByTaskIdentifier = [[NSMutableDictionary alloc] init];
-
+    
     self.lock = [[NSLock alloc] init];
     self.lock.name = AFURLSessionManagerLockName;
-
+    
     [self.session getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
         for (NSURLSessionDataTask *task in dataTasks) {
             [self addDelegateForDataTask:task completionHandler:nil];
         }
-
+        
         for (NSURLSessionUploadTask *uploadTask in uploadTasks) {
             [self addDelegateForUploadTask:uploadTask progress:nil completionHandler:nil];
         }
-
+        
         for (NSURLSessionDownloadTask *downloadTask in downloadTasks) {
             [self addDelegateForDownloadTask:downloadTask progress:nil destination:nil completionHandler:nil];
         }
     }];
-
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(taskDidResume:) name:AFNSURLSessionTaskDidResumeNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(taskDidSuspend:) name:AFNSURLSessionTaskDidSuspendNotification object:nil];
-
+    
     return self;
 }
 
@@ -506,12 +509,12 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
 
 - (AFURLSessionManagerTaskDelegate *)delegateForTask:(NSURLSessionTask *)task {
     NSParameterAssert(task);
-
+    
     AFURLSessionManagerTaskDelegate *delegate = nil;
     [self.lock lock];
     delegate = self.mutableTaskDelegatesKeyedByTaskIdentifier[@(task.taskIdentifier)];
     [self.lock unlock];
-
+    
     return delegate;
 }
 
@@ -520,7 +523,7 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
 {
     NSParameterAssert(task);
     NSParameterAssert(delegate);
-
+    
     [self.lock lock];
     self.mutableTaskDelegatesKeyedByTaskIdentifier[@(task.taskIdentifier)] = delegate;
     [self.lock unlock];
@@ -532,7 +535,7 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     AFURLSessionManagerTaskDelegate *delegate = [[AFURLSessionManagerTaskDelegate alloc] init];
     delegate.manager = self;
     delegate.completionHandler = completionHandler;
-
+    
     dataTask.taskDescription = self.taskDescriptionForSessionTasks;
     [self setDelegate:delegate forTask:dataTask];
 }
@@ -544,7 +547,7 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     AFURLSessionManagerTaskDelegate *delegate = [[AFURLSessionManagerTaskDelegate alloc] init];
     delegate.manager = self;
     delegate.completionHandler = completionHandler;
-
+    
     int64_t totalUnitCount = uploadTask.countOfBytesExpectedToSend;
     if(totalUnitCount == NSURLSessionTransferSizeUnknown) {
         NSString *contentLength = [uploadTask.originalRequest valueForHTTPHeaderField:@"Content-Length"];
@@ -552,26 +555,26 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
             totalUnitCount = (int64_t)[contentLength longLongValue];
         }
     }
-
+    
     if (delegate.progress) {
         delegate.progress.totalUnitCount = totalUnitCount;
     } else {
         delegate.progress = [NSProgress progressWithTotalUnitCount:totalUnitCount];
     }
-
+    
     delegate.progress.pausingHandler = ^{
         [uploadTask suspend];
     };
     delegate.progress.cancellationHandler = ^{
         [uploadTask cancel];
     };
-
+    
     if (progress) {
         *progress = delegate.progress;
     }
-
+    
     uploadTask.taskDescription = self.taskDescriptionForSessionTasks;
-
+    
     [self setDelegate:delegate forTask:uploadTask];
 }
 
@@ -583,25 +586,25 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     AFURLSessionManagerTaskDelegate *delegate = [[AFURLSessionManagerTaskDelegate alloc] init];
     delegate.manager = self;
     delegate.completionHandler = completionHandler;
-
+    
     if (destination) {
         delegate.downloadTaskDidFinishDownloading = ^NSURL * (NSURLSession * __unused session, NSURLSessionDownloadTask *task, NSURL *location) {
             return destination(location, task.response);
         };
     }
-
+    
     if (progress) {
         *progress = delegate.progress;
     }
-
+    
     downloadTask.taskDescription = self.taskDescriptionForSessionTasks;
-
+    
     [self setDelegate:delegate forTask:downloadTask];
 }
 
 - (void)removeDelegateForTask:(NSURLSessionTask *)task {
     NSParameterAssert(task);
-
+    
     [self.lock lock];
     [self.mutableTaskDelegatesKeyedByTaskIdentifier removeObjectForKey:@(task.taskIdentifier)];
     [self.lock unlock];
@@ -628,12 +631,12 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
         } else if ([keyPath isEqualToString:NSStringFromSelector(@selector(tasks))]) {
             tasks = [@[dataTasks, uploadTasks, downloadTasks] valueForKeyPath:@"@unionOfArrays.self"];
         }
-
+        
         dispatch_semaphore_signal(semaphore);
     }];
-
+    
     dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-
+    
     return tasks;
 }
 
@@ -669,8 +672,19 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
 
 - (void)setResponseSerializer:(id <AFURLResponseSerialization>)responseSerializer {
     NSParameterAssert(responseSerializer);
-
+    
     _responseSerializer = responseSerializer;
+}
+
+#pragma mark -
+- (void)addNotificationObserverForTask:(NSURLSessionTask *)task {
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(taskDidResume:) name:AFNSURLSessionTaskDidResumeNotification object:task];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(taskDidSuspend:) name:AFNSURLSessionTaskDidSuspendNotification object:task];
+}
+
+- (void)removeNotificationObserverForTask:(NSURLSessionTask *)task {
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AFNSURLSessionTaskDidResumeNotification object:task];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AFNSURLSessionTaskDidResumeNotification object:task];
 }
 
 #pragma mark -
@@ -682,9 +696,11 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         dataTask = [self.session dataTaskWithRequest:request];
     });
-
+    
+    [self addNotificationObserverForTask:dataTask];
+    
     [self addDelegateForDataTask:dataTask completionHandler:completionHandler];
-
+    
     return dataTask;
 }
 
@@ -699,15 +715,17 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         uploadTask = [self.session uploadTaskWithRequest:request fromFile:fileURL];
     });
-
+    
+    [self addNotificationObserverForTask:uploadTask];
+    
     if (!uploadTask && self.attemptsToRecreateUploadTasksForBackgroundSessions && self.session.configuration.identifier) {
         for (NSUInteger attempts = 0; !uploadTask && attempts < AFMaximumNumberOfAttemptsToRecreateBackgroundSessionUploadTask; attempts++) {
             uploadTask = [self.session uploadTaskWithRequest:request fromFile:fileURL];
         }
     }
-
+    
     [self addDelegateForUploadTask:uploadTask progress:progress completionHandler:completionHandler];
-
+    
     return uploadTask;
 }
 
@@ -720,9 +738,11 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         uploadTask = [self.session uploadTaskWithRequest:request fromData:bodyData];
     });
-
+    
+    [self addNotificationObserverForTask:uploadTask];
+    
     [self addDelegateForUploadTask:uploadTask progress:progress completionHandler:completionHandler];
-
+    
     return uploadTask;
 }
 
@@ -734,9 +754,11 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         uploadTask = [self.session uploadTaskWithStreamedRequest:request];
     });
-
+    
+    [self addNotificationObserverForTask:uploadTask];
+    
     [self addDelegateForUploadTask:uploadTask progress:progress completionHandler:completionHandler];
-
+    
     return uploadTask;
 }
 
@@ -751,9 +773,11 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         downloadTask = [self.session downloadTaskWithRequest:request];
     });
-
+    
+    [self addNotificationObserverForTask:downloadTask];
+    
     [self addDelegateForDownloadTask:downloadTask progress:progress destination:destination completionHandler:completionHandler];
-
+    
     return downloadTask;
 }
 
@@ -766,13 +790,18 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     dispatch_sync(url_session_manager_creation_queue(), ^{
         downloadTask = [self.session downloadTaskWithResumeData:resumeData];
     });
-
+    
+    [self addNotificationObserverForTask:downloadTask];
+    
     [self addDelegateForDownloadTask:downloadTask progress:progress destination:destination completionHandler:completionHandler];
-
+    
     return downloadTask;
 }
 
 #pragma mark -
+- (NSProgress *)progressForDataTask:(NSURLSessionDataTask *)dataTask {
+    return [[self delegateForTask:dataTask] progress];
+}
 
 - (NSProgress *)uploadProgressForTask:(NSURLSessionUploadTask *)uploadTask {
     return [[self delegateForTask:uploadTask] progress];
@@ -866,7 +895,7 @@ static NSString * const AFNSURLSessionTaskDidSuspendNotification = @"com.alamofi
     } else if (selector == @selector(URLSessionDidFinishEventsForBackgroundURLSession:)) {
         return self.didFinishEventsForBackgroundURLSession != nil;
     }
-
+    
     return [[self class] instancesRespondToSelector:selector];
 }
 
@@ -878,7 +907,7 @@ didBecomeInvalidWithError:(NSError *)error
     if (self.sessionDidBecomeInvalid) {
         self.sessionDidBecomeInvalid(session, error);
     }
-
+    
     [self removeAllDelegates];
     [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDidInvalidateNotification object:session];
 }
@@ -889,7 +918,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
 {
     NSURLSessionAuthChallengeDisposition disposition = NSURLSessionAuthChallengePerformDefaultHandling;
     __block NSURLCredential *credential = nil;
-
+    
     if (self.sessionDidReceiveAuthenticationChallenge) {
         disposition = self.sessionDidReceiveAuthenticationChallenge(session, challenge, &credential);
     } else {
@@ -908,7 +937,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             disposition = NSURLSessionAuthChallengePerformDefaultHandling;
         }
     }
-
+    
     if (completionHandler) {
         completionHandler(disposition, credential);
     }
@@ -923,11 +952,11 @@ willPerformHTTPRedirection:(NSHTTPURLResponse *)response
  completionHandler:(void (^)(NSURLRequest *))completionHandler
 {
     NSURLRequest *redirectRequest = request;
-
+    
     if (self.taskWillPerformHTTPRedirection) {
         redirectRequest = self.taskWillPerformHTTPRedirection(session, task, response, request);
     }
-
+    
     if (completionHandler) {
         completionHandler(redirectRequest);
     }
@@ -940,7 +969,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
 {
     NSURLSessionAuthChallengeDisposition disposition = NSURLSessionAuthChallengePerformDefaultHandling;
     __block NSURLCredential *credential = nil;
-
+    
     if (self.taskDidReceiveAuthenticationChallenge) {
         disposition = self.taskDidReceiveAuthenticationChallenge(session, task, challenge, &credential);
     } else {
@@ -955,7 +984,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             disposition = NSURLSessionAuthChallengePerformDefaultHandling;
         }
     }
-
+    
     if (completionHandler) {
         completionHandler(disposition, credential);
     }
@@ -966,13 +995,13 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
  needNewBodyStream:(void (^)(NSInputStream *bodyStream))completionHandler
 {
     NSInputStream *inputStream = nil;
-
+    
     if (self.taskNeedNewBodyStream) {
         inputStream = self.taskNeedNewBodyStream(session, task);
     } else if (task.originalRequest.HTTPBodyStream && [task.originalRequest.HTTPBodyStream conformsToProtocol:@protocol(NSCopying)]) {
         inputStream = [task.originalRequest.HTTPBodyStream copy];
     }
-
+    
     if (completionHandler) {
         completionHandler(inputStream);
     }
@@ -984,7 +1013,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     totalBytesSent:(int64_t)totalBytesSent
 totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
 {
-
+    
     int64_t totalUnitCount = totalBytesExpectedToSend;
     if(totalUnitCount == NSURLSessionTransferSizeUnknown) {
         NSString *contentLength = [task.originalRequest valueForHTTPHeaderField:@"Content-Length"];
@@ -992,10 +1021,10 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
             totalUnitCount = (int64_t) [contentLength longLongValue];
         }
     }
-
+    
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:task];
     [delegate URLSession:session task:task didSendBodyData:bytesSent totalBytesSent:totalBytesSent totalBytesExpectedToSend:totalUnitCount];
-
+    
     if (self.taskDidSendBodyData) {
         self.taskDidSendBodyData(session, task, bytesSent, totalBytesSent, totalUnitCount);
     }
@@ -1006,18 +1035,19 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
 didCompleteWithError:(NSError *)error
 {
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:task];
-
+    
     // delegate may be nil when completing a task in the background
     if (delegate) {
         [delegate URLSession:session task:task didCompleteWithError:error];
-
+        
         [self removeDelegateForTask:task];
     }
-
+    
     if (self.taskDidComplete) {
         self.taskDidComplete(session, task, error);
     }
-
+    
+    [self removeNotificationObserverForTask:task];
 }
 
 #pragma mark - NSURLSessionDataDelegate
@@ -1028,11 +1058,11 @@ didReceiveResponse:(NSURLResponse *)response
  completionHandler:(void (^)(NSURLSessionResponseDisposition disposition))completionHandler
 {
     NSURLSessionResponseDisposition disposition = NSURLSessionResponseAllow;
-
+    
     if (self.dataTaskDidReceiveResponse) {
         disposition = self.dataTaskDidReceiveResponse(session, dataTask, response);
     }
-
+    
     if (completionHandler) {
         completionHandler(disposition);
     }
@@ -1047,7 +1077,10 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask
         [self removeDelegateForTask:dataTask];
         [self setDelegate:delegate forTask:downloadTask];
     }
-
+    
+    [self removeNotificationObserverForTask:dataTask];
+    [self addNotificationObserverForTask:downloadTask];
+    
     if (self.dataTaskDidBecomeDownloadTask) {
         self.dataTaskDidBecomeDownloadTask(session, dataTask, downloadTask);
     }
@@ -1057,9 +1090,11 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask
           dataTask:(NSURLSessionDataTask *)dataTask
     didReceiveData:(NSData *)data
 {
+    
+    
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:dataTask];
     [delegate URLSession:session dataTask:dataTask didReceiveData:data];
-
+    
     if (self.dataTaskDidReceiveData) {
         self.dataTaskDidReceiveData(session, dataTask, data);
     }
@@ -1071,11 +1106,11 @@ didBecomeDownloadTask:(NSURLSessionDownloadTask *)downloadTask
  completionHandler:(void (^)(NSCachedURLResponse *cachedResponse))completionHandler
 {
     NSCachedURLResponse *cachedResponse = proposedResponse;
-
+    
     if (self.dataTaskWillCacheResponse) {
         cachedResponse = self.dataTaskWillCacheResponse(session, dataTask, proposedResponse);
     }
-
+    
     if (completionHandler) {
         completionHandler(cachedResponse);
     }
@@ -1103,16 +1138,20 @@ didFinishDownloadingToURL:(NSURL *)location
             NSError *error = nil;
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:fileURL error:&error];
             if (error) {
-                [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:error.userInfo];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:error.userInfo];
+                });
             }
-
+            
             return;
         }
     }
-
+    
     if (delegate) {
         [delegate URLSession:session downloadTask:downloadTask didFinishDownloadingToURL:location];
     }
+    
+    [self removeNotificationObserverForTask:downloadTask];
 }
 
 - (void)URLSession:(NSURLSession *)session
@@ -1123,7 +1162,7 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
 {
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:downloadTask];
     [delegate URLSession:session downloadTask:downloadTask didWriteData:bytesWritten totalBytesWritten:totalBytesWritten totalBytesExpectedToWrite:totalBytesExpectedToWrite];
-
+    
     if (self.downloadTaskDidWriteData) {
         self.downloadTaskDidWriteData(session, downloadTask, bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     }
@@ -1136,7 +1175,7 @@ expectedTotalBytes:(int64_t)expectedTotalBytes
 {
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:downloadTask];
     [delegate URLSession:session downloadTask:downloadTask didResumeAtOffset:fileOffset expectedTotalBytes:expectedTotalBytes];
-
+    
     if (self.downloadTaskDidResume) {
         self.downloadTaskDidResume(session, downloadTask, fileOffset, expectedTotalBytes);
     }
@@ -1148,14 +1187,14 @@ expectedTotalBytes:(int64_t)expectedTotalBytes
     return YES;
 }
 
-- (id)initWithCoder:(NSCoder *)decoder {
+- (instancetype)initWithCoder:(NSCoder *)decoder {
     NSURLSessionConfiguration *configuration = [decoder decodeObjectOfClass:[NSURLSessionConfiguration class] forKey:@"sessionConfiguration"];
-
+    
     self = [self initWithSessionConfiguration:configuration];
     if (!self) {
         return nil;
     }
-
+    
     return self;
 }
 
@@ -1165,10 +1204,8 @@ expectedTotalBytes:(int64_t)expectedTotalBytes
 
 #pragma mark - NSCopying
 
-- (id)copyWithZone:(NSZone *)zone {
+- (instancetype)copyWithZone:(NSZone *)zone {
     return [[[self class] allocWithZone:zone] initWithSessionConfiguration:self.session.configuration];
 }
 
 @end
-
-#endif

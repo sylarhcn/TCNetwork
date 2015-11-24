@@ -7,20 +7,18 @@
 //
 
 #import "TCHTTPRequest.h"
-#import "AFHTTPRequestOperation.h"
 #import "TCHTTPRequestHelper.h"
 
 
 NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 
-@interface AFURLConnectionOperation (TCHTTPRequest)
-@property (nonatomic, strong, readwrite) NSURLRequest *request;
-@end
-
 @interface TCHTTPRequest ()
 
 @property (atomic, assign, readwrite) BOOL isCancelled;
+@property (nonatomic, strong, readwrite) NSURLSessionTask *requestTask;
+@property (nonatomic, strong, readwrite) NSProgress *uploadProgress;
+@property (nonatomic, strong, readwrite) NSProgress *downloadProgress;
 
 @end
 
@@ -66,7 +64,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 - (id<NSCoding>)responseObject
 {
-    return nil != _requestOperation ? ((id<NSCoding>)_requestOperation.responseObject) : nil;
+    return nil != _requestTask ? ((id<NSCoding>)self.rawResponseObject) : nil;
 }
 
 - (void)setObserver:(__unsafe_unretained id)observer
@@ -86,7 +84,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 - (NSString *)requestIdentifier
 {
     if (nil == _requestIdentifier) {
-        _requestIdentifier = [NSString stringWithFormat:@"%p_%@_%zd", self.observer, self.apiUrl, self.requestMethod].MD5_16;
+        _requestIdentifier = [TCHTTPRequestHelper MD5_16:[NSString stringWithFormat:@"%p_%@_%zd", self.observer, self.apiUrl, self.requestMethod]];
     }
     
     return _requestIdentifier;
@@ -99,6 +97,25 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     }
     
     return _downloadIdentifier;
+}
+
+- (NSString *)downloadResumeCacheDirectory
+{
+    if (nil == _downloadResumeCacheDirectory) {
+        
+        NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:@"TCHTTPRequestResumeCache"];
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:dir
+                                       withIntermediateDirectories:YES
+                                                        attributes:nil
+                                                             error:NULL]) {
+            NSAssert(false, @"create directory failed.");
+            dir = nil;
+        }
+        
+        _downloadResumeCacheDirectory = dir;
+    }
+    
+    return _downloadResumeCacheDirectory;
 }
 
 - (id<TCHTTPResponseValidator>)responseValidator
@@ -150,9 +167,17 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 - (void)cancel
 {
-    if (_requestOperation.isExecuting && !self.isCancelled) {
+    if ((_requestTask.state != NSURLSessionTaskStateCanceling && _requestTask.state != NSURLSessionTaskStateCompleted) &&
+        !self.isCancelled) {
         self.isCancelled = YES;
-        [_requestOperation cancel];
+        
+        if ([_requestTask isKindOfClass:NSURLSessionDownloadTask.class]) {
+            [(NSURLSessionDownloadTask *)_requestTask cancelByProducingResumeData:^(NSData * _Nullable resumeData) {
+                // not main thread
+            }];
+        } else {
+            [_requestTask cancel];
+        }
     }
 }
 
@@ -227,7 +252,6 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
         
         if (clean) {
             wSelf.resultBlock = nil;
-            wSelf.downloadProgressBlock = nil;
         }
         
         if (nil != finish) {
@@ -237,8 +261,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     
     if (NSThread.isMainThread) {
         block();
-    }
-    else {
+    } else {
         dispatch_async(dispatch_get_main_queue(), block);
     }
 }
@@ -258,7 +281,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 - (NSString *)description
 {
-    NSURLRequest *request = self.requestOperation.request;
+    NSURLRequest *request = self.requestTask.originalRequest;
     return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@\n response: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding], self.responseObject];
 }
 
