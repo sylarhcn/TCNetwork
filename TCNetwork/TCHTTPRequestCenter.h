@@ -16,7 +16,6 @@
 NS_CLASS_AVAILABLE_IOS(7_0) @interface TCHTTPRequestCenter : NSObject <TCHTTPRequestCenterProtocol>
 
 @property (nonatomic, strong) NSURL *baseURL;
-@property (nonatomic, strong) NSURL *cdnURL;
 
 @property (nonatomic, assign, readonly) BOOL networkReachable;
 // default: 0, use Max(-[TCHTTPRequestCenter timeoutInterval], -[TCHTTPRequest timeoutInterval])

@@ -44,6 +44,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     self = [super init];
     if (self) {
         _timeoutInterval = 60.0f;
+        _requestMethod = kTCHTTPRequestMethodCustom;
     }
     return self;
 }
@@ -171,9 +172,10 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
         !self.isCancelled) {
         self.isCancelled = YES;
         
-        if ([_requestTask isKindOfClass:NSURLSessionDownloadTask.class]) {
+        if (self.requestMethod == kTCHTTPRequestMethodDownload && self.shouldResumeDownload &&
+            [_requestTask isKindOfClass:NSURLSessionDownloadTask.class] && [_requestTask respondsToSelector:@selector(cancelByProducingResumeData:)]) {
             [(NSURLSessionDownloadTask *)_requestTask cancelByProducingResumeData:^(NSData * _Nullable resumeData) {
-                // not main thread
+                // not in main thread
             }];
         } else {
             [_requestTask cancel];

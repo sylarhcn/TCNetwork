@@ -326,10 +326,8 @@
             case kTCHTTPRequestMethodPost: {
                 
                 if (nil != request.constructingBodyBlock) {
-                    NSProgress *progress = nil;
-                    task = [requestMgr POST:url parameters:param progress:&progress constructingBodyWithBlock:request.constructingBodyBlock success:successBlock failure:failureBlock];
+                    task = [requestMgr POST:url parameters:param constructingBodyWithBlock:request.constructingBodyBlock success:successBlock failure:failureBlock];
                     request.constructingBodyBlock = nil;
-                    request.uploadProgress = progress;
                 } else {
                     task = [requestMgr POST:url parameters:param success:successBlock failure:failureBlock];
                 }

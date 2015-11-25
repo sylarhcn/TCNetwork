@@ -30,6 +30,10 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestMethod) {
     kTCHTTPRequestMethodDelete,
     kTCHTTPRequestMethodPatch,
     kTCHTTPRequestMethodDownload,
+    
+    
+    
+    kTCHTTPRequestMethodCustom = -1,
 };
 
 
