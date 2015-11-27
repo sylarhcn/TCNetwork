@@ -15,13 +15,12 @@
 + (NSString *)urlString:(NSString *)originUrlString appendParameters:(NSDictionary *)parameters
 {
     NSString *url = originUrlString;
-    NSString *paraUrlString = [parameters convertToHttpQuery];
+    NSString *paraUrlString = parameters.convertToHttpQuery;
     
     if (nil != paraUrlString && paraUrlString.length > 0) {
         if ([originUrlString rangeOfString:@"?"].location != NSNotFound) {
             url = [originUrlString stringByAppendingString:paraUrlString];
-        }
-        else {
+        } else {
             url = [originUrlString stringByAppendingFormat:@"?%@", [paraUrlString substringFromIndex:1]];
         }
     }

@@ -206,10 +206,12 @@
     __block NSURLSessionTask *task = nil;
     
     void (^successBlock)() = ^(NSURLSessionTask *task, id responseObject) {
+        NSAssert([NSThread isMainThread], @"not main thread");
         request.rawResponseObject = responseObject;
         [self handleRequestResult:request success:YES error:nil];
     };
     void (^failureBlock)() = ^(NSURLSessionTask *task, NSError *error) {
+        NSAssert([NSThread isMainThread], @"not main thread");
         [self handleRequestResult:request success:NO error:error];
     };
     
@@ -238,7 +240,6 @@
     if ([self.urlFilter respondsToSelector:@selector(filteredParamForParam:)]) {
         param = [self.urlFilter filteredParamForParam:param];
     }
-    
     
     
     AFHTTPSessionManager *requestMgr = self.requestManager;

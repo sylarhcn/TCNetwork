@@ -34,8 +34,7 @@
         for (id request in requests) {
             if ([request isKindOfClass:TCHTTPRequest.class]) {
                 res = YES;
-            }
-            else {
+            } else {
                 res = NO;
                 break;
             }
@@ -127,8 +126,7 @@
         if ([self checkFinished]) {
             [self requestCallback:YES];
         }
-    }
-    else {
+    } else {
 
         [self cancel];
         [self requestCallback:NO];

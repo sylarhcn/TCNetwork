@@ -83,11 +83,9 @@
     if (!_shouldCacheEmptyResponse) {
         if ([responseObject isKindOfClass:NSDictionary.class]) {
             return [(NSDictionary *)responseObject count] > 0;
-        }
-        else if ([responseObject isKindOfClass:NSArray.class]) {
+        } else if ([responseObject isKindOfClass:NSArray.class]) {
             return [(NSArray *)responseObject count] > 0;
-        }
-        else if ([responseObject isKindOfClass:NSString.class]) {
+        } else if ([responseObject isKindOfClass:NSString.class]) {
             return [(NSString *)responseObject length] > 0;
         }
     }
@@ -234,8 +232,7 @@
         }
         
         return kTCHTTPCachedResponseStateValid;
-    }
-    else {
+    } else {
         return kTCHTTPCachedResponseStateExpired;
     }
 }
@@ -293,8 +290,7 @@
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [sSelf cacheRequestCallbackWithoutFiring:YES];
                 });
-            }
-            else if (wSelf.shouldExpiredCacheValid) {
+            } else if (wSelf.shouldExpiredCacheValid) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [sSelf cacheRequestCallbackWithoutFiring:![sSelf callSuperStart]];
                 });
@@ -381,8 +377,7 @@
     if ([fileManager fileExistsAtPath:path isDirectory:&isDir]) {
         if (isDir) {
             return YES;
-        }
-        else {
+        } else {
             [fileManager removeItemAtPath:path error:NULL];
         }
     }
