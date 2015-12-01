@@ -10,8 +10,8 @@
 
 @interface TCHTTPBatchRequest () <TCHTTPRequestDelegate>
 
-@property(atomic,assign,readwrite) BOOL isCancelled;
-@property(atomic,strong) NSMutableDictionary *finishDic;
+@property (atomic, assign, readwrite) BOOL isCancelled;
+@property (atomic, strong) NSMutableDictionary *finishDic;
 
 @end
 
@@ -21,12 +21,12 @@
 @synthesize requestArray = _requestArray;
 
 
-+ (instancetype)requestWithRequests:(NSArray *)requests
++ (instancetype)requestWithRequests:(NSArray<__kindof TCHTTPRequest *> *)requests
 {
     return [[self alloc] initWithRequests:requests];
 }
 
-- (instancetype)initWithRequests:(NSArray *)requests
+- (instancetype)initWithRequests:(NSArray<__kindof TCHTTPRequest *> *)requests
 {
     self = [self init];
     if (self) {
@@ -34,8 +34,7 @@
         for (id request in requests) {
             if ([request isKindOfClass:TCHTTPRequest.class]) {
                 res = YES;
-            }
-            else {
+            } else {
                 res = NO;
                 break;
             }
@@ -112,7 +111,6 @@
         request.delegate = nil;
         request.resultBlock = nil;
         request.constructingBodyBlock = nil;
-        request.downloadProgressBlock = nil;
         [request cancel];
     }
 }
@@ -128,8 +126,7 @@
         if ([self checkFinished]) {
             [self requestCallback:YES];
         }
-    }
-    else {
+    } else {
 
         [self cancel];
         [self requestCallback:NO];
@@ -144,18 +141,7 @@
         [self.requestAgent removeRequestObserver:self.observer forIdentifier:self.requestIdentifier];
     }
     
-    if (isValid) {
-        [self requestRespondSuccess];
-    }
-    
-    if (nil != self.delegate && [self.delegate respondsToSelector:@selector(processRequest:success:)]) {
-        [self.delegate processRequest:self success:isValid];
-    }
-    
-    if (nil != self.resultBlock) {
-        self.resultBlock(self, isValid);
-        self.resultBlock = nil;
-    }
+    [self requestResponded:isValid finish:nil clean:YES];
 }
 
 - (BOOL)checkFinished

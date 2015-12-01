@@ -30,6 +30,10 @@ typedef NS_ENUM(NSInteger, TCHTTPRequestMethod) {
     kTCHTTPRequestMethodDelete,
     kTCHTTPRequestMethodPatch,
     kTCHTTPRequestMethodDownload,
+    
+    
+    
+    kTCHTTPRequestMethodCustom = -1,
 };
 
 
@@ -46,9 +50,6 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 @required
 
 #pragma mark - callback
-
-@property (nonatomic, weak) id<TCHTTPRequestDelegate> delegate;
-@property (nonatomic, copy) void (^resultBlock)(id<TCHTTPRequestProtocol> request, BOOL success);
 
 @property (nonatomic, strong) id<TCHTTPResponseValidator> responseValidator;
 @property (nonatomic, weak) id<TCHTTPRequestCenterProtocol> requestAgent;
@@ -71,6 +72,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 - (BOOL)start:(NSError **)error;
 - (BOOL)startWithResult:(void (^)(id<TCHTTPRequestProtocol> request, BOOL success))resultBlock error:(NSError **)error;
 
+- (BOOL)canStart:(NSError **)error;
 // delegate, resulteBlock always called, even if request was cancelled.
 - (void)cancel;
 
@@ -80,17 +82,15 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 
 @property (nonatomic, copy) NSString *apiUrl; // "getUserInfo/"
 @property (nonatomic, copy) NSString *baseUrl; // "http://eet/oo/"
-@property (nonatomic, copy) NSString *cdnUrl; // "http://sdfd/oo"
 
-@property (nonatomic, assign) BOOL shouldUseCDN;
 @property (nonatomic, assign) TCHTTPRequestMethod requestMethod;
 @property (nonatomic, assign) BOOL isRetainByRequestPool;
 
 - (id<NSCoding>)responseObject;
+
 // for override
-- (void)requestRespondSuccess;
-- (void)requestRespondFailed;
-- (void)requestRespondReset;
+- (void)requestResponseReset;
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean;
 
 
 #pragma mark - Cache
@@ -101,6 +101,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 @property (nonatomic, assign) BOOL isForceStart;
 // should return expired cache or not
 @property (nonatomic, assign) BOOL shouldExpiredCacheValid; // default: NO
+@property (nonatomic, assign) BOOL shouldCacheEmptyResponse; // default: YES, empty means: empty string, array, dictionary
 
 
 /**
@@ -116,7 +117,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 - (BOOL)isDataFromCache;
 - (BOOL)isCacheValid;
 - (TCHTTPCachedResponseState)cacheState;
-- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state; // always nil
+- (void)cachedResponseByForce:(BOOL)force result:(void(^)(id response, TCHTTPCachedResponseState state))result; // always nil
 
 
 // default: parameters = self.parameters, sensitiveData = nil
@@ -126,7 +127,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 
 #pragma mark - Batch
 
-@property (nonatomic, copy, readonly) NSArray *requestArray;
+@property (nonatomic, copy, readonly) NSArray<id<TCHTTPRequestProtocol>> *requestArray;
 
 @end
 
@@ -140,6 +141,7 @@ extern NSInteger const kTCHTTPRequestCacheNeverExpired;
 - (void)removeRequestObserver:(__unsafe_unretained id)observer forIdentifier:(id<NSCopying>)identifier;
 - (void)removeRequestObserver:(__unsafe_unretained id)observer;
 
+- (BOOL)canAddRequest:(TCHTTPRequest *)request error:(NSError **)error;
 - (BOOL)addRequest:(TCHTTPRequest *)request error:(NSError **)error;
 - (NSString *)buildRequestUrlForRequest:(id<TCHTTPRequestProtocol>)request;
 

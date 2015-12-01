@@ -7,20 +7,18 @@
 //
 
 #import "TCHTTPRequest.h"
-#import "AFHTTPRequestOperation.h"
 #import "TCHTTPRequestHelper.h"
 
 
 NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 
-@interface AFURLConnectionOperation (TCHTTPRequest)
-@property(nonatomic,strong,readwrite) NSURLRequest *request;
-@end
-
 @interface TCHTTPRequest ()
 
-@property(atomic,assign,readwrite) BOOL isCancelled;
+@property (atomic, assign, readwrite) BOOL isCancelled;
+@property (nonatomic, strong, readwrite) NSURLSessionTask *requestTask;
+@property (nonatomic, strong, readwrite) NSProgress *uploadProgress;
+@property (nonatomic, strong, readwrite) NSProgress *downloadProgress;
 
 @end
 
@@ -28,8 +26,6 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 @implementation TCHTTPRequest
 {
     @private
-    NSString *_authorizationUsername;
-    NSString *_authorizationPassword;
     void *_observer;
 }
 
@@ -37,6 +33,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 @dynamic shouldCacheResponse;
 @dynamic cacheTimeoutInterval;
 @dynamic shouldExpiredCacheValid;
+@dynamic shouldCacheEmptyResponse;
 
 @synthesize isForceStart = _isForceStart;
 @synthesize isRetainByRequestPool = _isRetainByRequestPool;
@@ -47,6 +44,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     self = [super init];
     if (self) {
         _timeoutInterval = 60.0f;
+        _requestMethod = kTCHTTPRequestMethodCustom;
     }
     return self;
 }
@@ -67,7 +65,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 - (id<NSCoding>)responseObject
 {
-    return nil != _requestOperation ? ((id<NSCoding>)_requestOperation.responseObject) : nil;
+    return nil != _requestTask ? ((id<NSCoding>)self.rawResponseObject) : nil;
 }
 
 - (void)setObserver:(__unsafe_unretained id)observer
@@ -87,7 +85,7 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 - (NSString *)requestIdentifier
 {
     if (nil == _requestIdentifier) {
-        _requestIdentifier = [NSString stringWithFormat:@"%p_%@_%zd", self.observer, self.apiUrl, self.requestMethod].MD5_16;
+        _requestIdentifier = [TCHTTPRequestHelper MD5_16:[NSString stringWithFormat:@"%p_%@_%zd", self.observer, self.apiUrl, self.requestMethod]];
     }
     
     return _requestIdentifier;
@@ -96,10 +94,29 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 - (NSString *)downloadIdentifier
 {
     if (nil == _downloadIdentifier) {
-        _downloadIdentifier = self.apiUrl.MD5_16;
+        _downloadIdentifier = [TCHTTPRequestHelper MD5_16:self.apiUrl];
     }
     
     return _downloadIdentifier;
+}
+
+- (NSString *)downloadResumeCacheDirectory
+{
+    if (nil == _downloadResumeCacheDirectory) {
+        
+        NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:@"TCHTTPRequestResumeCache"];
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:dir
+                                       withIntermediateDirectories:YES
+                                                        attributes:nil
+                                                             error:NULL]) {
+            NSAssert(false, @"create directory failed.");
+            dir = nil;
+        }
+        
+        _downloadResumeCacheDirectory = dir;
+    }
+    
+    return _downloadResumeCacheDirectory;
 }
 
 - (id<TCHTTPResponseValidator>)responseValidator
@@ -111,6 +128,18 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     }
     
     return _responseValidator;
+}
+
+
+- (BOOL)canStart:(NSError **)error
+{
+    NSParameterAssert(self.requestAgent);
+    
+    if (nil != self.requestAgent && [self.requestAgent respondsToSelector:@selector(canAddRequest:error:)]) {
+        return [self.requestAgent canAddRequest:self error:error];
+    }
+    
+    return NO;
 }
 
 
@@ -139,9 +168,18 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
 
 - (void)cancel
 {
-    if (_requestOperation.isExecuting && !self.isCancelled) {
+    if ((_requestTask.state != NSURLSessionTaskStateCanceling && _requestTask.state != NSURLSessionTaskStateCompleted) &&
+        !self.isCancelled) {
         self.isCancelled = YES;
-        [_requestOperation cancel];
+        
+        if (self.requestMethod == kTCHTTPRequestMethodDownload && self.shouldResumeDownload &&
+            [_requestTask isKindOfClass:NSURLSessionDownloadTask.class] && [_requestTask respondsToSelector:@selector(cancelByProducingResumeData:)]) {
+            [(NSURLSessionDownloadTask *)_requestTask cancelByProducingResumeData:^(NSData * _Nullable resumeData) {
+                // not in main thread
+            }];
+        } else {
+            [_requestTask cancel];
+        }
     }
 }
 
@@ -171,6 +209,11 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     return YES;
 }
 
+- (void)setShouldIgnoreCache:(BOOL)shouldIgnoreCache
+{
+    
+}
+
 - (BOOL)shouldCacheResponse
 {
     return NO;
@@ -186,22 +229,46 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     return NO;
 }
 
-- (id)cachedResponseByForce:(BOOL)force state:(TCHTTPCachedResponseState *)state
-{
-    return nil;
-}
-
-- (void)requestRespondSuccess
+- (void)cachedResponseByForce:(BOOL)force result:(void(^)(id response, TCHTTPCachedResponseState state))result
 {
     
 }
 
-- (void)requestRespondFailed
+- (void)requestResponded:(BOOL)isValid finish:(dispatch_block_t)finish clean:(BOOL)clean
 {
+#ifndef TC_IOS_PUBLISH
+    if (!isValid) {
+        NSLog(@"%@\n \nERROR: %@", self, self.responseValidator.error);
+    }
+#endif
     
+    __weak typeof(self) wSelf = self;
+    dispatch_block_t block = ^{
+        if (nil != wSelf.delegate && [wSelf.delegate respondsToSelector:@selector(processRequest:success:)]) {
+            [wSelf.delegate processRequest:wSelf success:isValid];
+        }
+
+        if (nil != wSelf.resultBlock) {
+            wSelf.resultBlock(wSelf, isValid);
+        }
+        
+        if (clean) {
+            wSelf.resultBlock = nil;
+        }
+        
+        if (nil != finish) {
+            finish();
+        }
+    };
+    
+    if (NSThread.isMainThread) {
+        block();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
 
-- (void)requestRespondReset
+- (void)requestResponseReset
 {
     
 }
@@ -212,22 +279,11 @@ NSInteger const kTCHTTPRequestCacheNeverExpired = -1;
     @throw [NSException exceptionWithName:NSStringFromClass(self.class) reason:@"for subclass to impl" userInfo:nil];
 }
 
-
-#pragma mark - Custom
-
-- (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
-                                       password:(NSString *)password
-{
-    _authorizationUsername = username.copy;
-    _authorizationPassword = password.copy;
-}
-
-
 #pragma mark - Helper
 
 - (NSString *)description
 {
-    NSURLRequest *request = self.requestOperation.request;
+    NSURLRequest *request = self.requestTask.originalRequest;
     return [NSString stringWithFormat:@"🌍🌍🌍 %@: %@\n param: %@\n response: %@", NSStringFromClass(self.class), request.URL, [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding], self.responseObject];
 }
 

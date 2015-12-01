@@ -10,23 +10,16 @@
 
 @interface TCHTTPRequestHelper : NSObject
 
-//+ (BOOL)isValue:(id)json confirmType:(id)validator;
 + (NSString *)urlString:(NSString *)originUrlString appendParameters:(NSDictionary *)parameters;
 
++ (NSString *)MD5_32:(NSString *)str;
++ (NSString *)MD5_16:(NSString *)str;
+
 @end
 
 
-@interface NSDictionary (TCHelper)
+@interface NSDictionary (TCHTTPRequestHelper)
 
 - (NSString *)convertToHttpQuery;
-- (id)valueForKeyExceptNull:(NSString *)key;
-
-@end
-
-@interface NSString (MD5)
-
-// for MD5
-- (NSString *)MD5_32;
-- (NSString *)MD5_16;
 
 @end

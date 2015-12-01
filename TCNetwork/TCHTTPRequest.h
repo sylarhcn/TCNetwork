@@ -13,15 +13,12 @@
 
 typedef NS_ENUM(NSInteger, TCHTTPRequestSerializerType) {
     kTCHTTPRequestSerializerTypeHTTP = 0,
-    kTCHTTPRequestSerializerTypeJSON,
+    kTCHTTPRequestSerializerTypeJSON, // encodes parameters as JSON using `NSJSONSerialization`, setting the `Content-Type` of the encoded request to `application/json`
 };
 
 
 @protocol AFMultipartFormData;
 typedef void (^AFConstructingBlock)(id<AFMultipartFormData> formData);
-
-@class AFDownloadRequestOperation;
-typedef void (^AFDownloadProgressBlock)(AFDownloadRequestOperation *operation, NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile);
 
 @class TCHTTPRequest;
 typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
@@ -29,8 +26,7 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 
 #pragma mark -
 
-@class AFHTTPRequestOperation;
-@interface TCHTTPRequest : NSObject <TCHTTPRequestProtocol>
+NS_CLASS_AVAILABLE_IOS(7_0) @interface TCHTTPRequest : NSObject <TCHTTPRequestProtocol>
 
 //
 // callback
@@ -40,7 +36,9 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 
 @property (nonatomic, strong) id<TCHTTPResponseValidator> responseValidator;
 @property (nonatomic, weak) id<TCHTTPRequestCenterProtocol> requestAgent;
-@property (nonatomic, strong) AFHTTPRequestOperation *requestOperation;
+
+@property (nonatomic, strong, readonly) NSURLSessionTask *requestTask;
+@property (nonatomic, strong) id rawResponseObject;
 
 @property (nonatomic, copy) NSString *requestIdentifier;
 @property (nonatomic, strong) NSDictionary *userInfo;
@@ -52,12 +50,10 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 //
 @property (nonatomic, copy) NSString *apiUrl; // "getUserInfo/"
 @property (nonatomic, copy) NSString *baseUrl; // "http://eet/oo/"
-@property (nonatomic, copy) NSString *cdnUrl; // "http://sdfd/oo"
 
 // Auto convert to query string, if requestMethod is GET
 @property (nonatomic, strong) NSDictionary *parameters;
 
-@property (nonatomic, assign) BOOL shouldUseCDN;
 @property (nonatomic, assign) NSTimeInterval timeoutInterval; // default: 60s
 @property (nonatomic, assign) TCHTTPRequestMethod requestMethod;
 @property (nonatomic, assign) TCHTTPRequestSerializerType serializerType;
@@ -97,34 +93,21 @@ typedef void (^TCRequestResultBlockType)(TCHTTPRequest *request, BOOL success);
 #pragma mark - Upload
 
 @property (nonatomic, copy) AFConstructingBlock constructingBodyBlock;
-
+@property (nonatomic, strong, readonly) NSProgress *uploadProgress;
 
 #pragma mark - Download
 
 @property (nonatomic, assign) BOOL shouldResumeDownload; // default: NO
-@property (nonatomic, copy) NSString *downloadIdentifier; // such as hash string, but can not be file system path!
-@property (nonatomic, copy) NSString *downloadTargetPath;
-@property (nonatomic, copy) AFDownloadProgressBlock downloadProgressBlock;
+@property (nonatomic, copy) NSString *downloadIdentifier; // such as hash string, but can not be file system path! if nil, apiUrl's md5 used.
+@property (nonatomic, copy) NSString *downloadResumeCacheDirectory; // if nil, tmp directory used.
+@property (nonatomic, copy) NSString *downloadDestinationPath;
+@property (nonatomic, strong, readonly) NSProgress *downloadProgress;
 
 
 #pragma mark - Custom
 
-// custom value in HTTP Head
-@property (nonatomic, strong) NSDictionary *customHeaderValue;
-// set none nil to ignore requestUrl, argument, requestMethod, serializerType
+// set nonull to ignore requestUrl, argument, requestMethod, serializerType
 @property (nonatomic, strong) NSURLRequest *customUrlRequest;
-
-@property (nonatomic, copy, readonly) NSString *username;
-@property (nonatomic, copy, readonly) NSString *password;
-
-/**
- Sets the "Authorization" HTTP header set in request objects made by the HTTP client to a basic authentication value with Base64-encoded username and password. This overwrites any existing value for this header.
- 
- @param username The HTTP basic auth username
- @param password The HTTP basic auth password
- */
-- (void)setAuthorizationHeaderFieldWithUsername:(NSString *)username
-                                       password:(NSString *)password;
 
 
 @end
